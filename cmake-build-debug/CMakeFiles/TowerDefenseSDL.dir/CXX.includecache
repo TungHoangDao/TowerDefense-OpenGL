@@ -1,0 +1,28 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+C:/Users/61416/CLionProjects/TowerDefenseSDL/main.cpp
+GL/glew.h
+-
+GL/gl.h
+-
+GL/glu.h
+-
+GL/glut.h
+-
+SDL2/SDL.h
+-
+stdbool.h
+-
+stdlib.h
+-
+math.h
+-
+cstdio
+-
+
