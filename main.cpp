@@ -71,187 +71,227 @@ enum DerefMethods {
     NUMDEREFMETHODS
 } derefMethod = MULTIDRAWELEMENTS;
 
-bool useBufferObjects = false;
+#define BUFFER_OFFSET(i) ((void*)(i))
 
-GLfloat vertices[] = {
-        -1.0, -1.0, -1.0, // 0
-        1.0, -1.0, -1.0, // 1
-        1.0,  1.0, -1.0, // 2
-        -1.0,  1.0, -1.0, // 3
-        -1.0, -1.0,  1.0, // 4
-        1.0, -1.0,  1.0, // 5
-        1.0,  1.0,  1.0, // 6
-        -1.0,  1.0,  1.0  // 7
-};
+typedef struct { float x, y, z; } vec3f;
+typedef struct { vec3f r, n; } Vertex;
 
-GLfloat colors[] = {
-        0.0, 0.0, 0.0, // 0
-        1.0, 0.0, 0.0, // 1
-        0.0, 1.0, 0.0, // 2
-        0.0, 0.0, 1.0, // 3
-        1.0, 1.0, 0.0, // 4
-        1.0, 0.0, 1.0, // 5
-        0.0, 1.0, 1.0, // 6
-        1.0, 1.0, 1.0, // 7
-};
+Vertex *vertices;
+unsigned *indices;
+unsigned n_vertices, n_indices;
+unsigned vbo, ibo;
+unsigned rows = 4, cols = 4;
 
-GLfloat colorsAndVertices[] = {
-        // Colors
-        0.0, 0.0, 0.0, // 0
-        1.0, 0.0, 0.0, // 1
-        0.0, 1.0, 0.0, // 2
-        0.0, 0.0, 1.0, // 3
-        1.0, 1.0, 0.0, // 4
-        1.0, 0.0, 1.0, // 5
-        0.0, 1.0, 1.0, // 6
-        1.0, 1.0, 1.0, // 7
-        // Vertices
-        0.0, 0.0, 0.0, // 0
-        1.0, 0.0, 0.0, // 1
-        1.0, 1.0, 0.0, // 2
-        0.0, 1.0, 0.0, // 3
-        0.0, 0.0, 1.0, // 4
-        1.0, 0.0, 1.0, // 5
-        1.0, 1.0, 1.0, // 6
-        0.0, 1.0, 1.0, // 7
-};
+enum { IM = 0, SA, SAI, VA, VBO, nM } mode = IM;
 
-GLfloat colorsAndVerticesInterleaved[] = {
-        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, // 0
-        1.0, 0.0, 0.0, 1.0, 0.0, 0.0, // 1
-        0.0, 1.0, 0.0, 1.0, 1.0, 0.0, // 2
-        0.0, 0.0, 1.0, 0.0, 1.0, 0.0, // 3
-        1.0, 1.0, 0.0, 0.0, 0.0, 1.0, // 4
-        1.0, 0.0, 1.0, 1.0, 0.0, 1.0, // 5
-        0.0, 1.0, 1.0, 1.0, 1.0, 1.0, // 6
-        1.0, 1.0, 1.0, 0.0, 1.0, 1.0, // 7
-};
+void enableVAs()
+{
+    glEnableClientState(GL_VERTEX_ARRAY);
+}
 
-GLfloat verticesQuads[] = {
-        // Front
-        -1.0, -1.0,  1.0, // 4
-        1.0, -1.0,  1.0, // 5
-        1.0,  1.0,  1.0, // 6
-        -1.0,  1.0,  1.0, // 7
-        // Back
-        -1.0, -1.0, -1.0, // 0
-        -1.0,  1.0, -1.0, // 3
-        1.0,  1.0, -1.0, // 2
-        1.0, -1.0, -1.0, // 1
-        // Left
-        -1.0, -1.0, -1.0, // 0
-        -1.0, -1.0,  1.0, // 4
-        -1.0,  1.0,  1.0, // 7
-        -1.0,  1.0, -1.0, // 3
-        // Right
-        1.0, -1.0, -1.0, // 1
-        1.0,  1.0, -1.0, // 2
-        1.0,  1.0,  1.0, // 6
-        1.0, -1.0,  1.0, // 5
-        // Bottom
-        -1.0, -1.0, -1.0, // 0
-        1.0, -1.0, -1.0, // 1
-        1.0, -1.0,  1.0, // 5
-        -1.0, -1.0,  1.0, // 4
-        // Top
-        1.0,  1.0, -1.0, // 2
-        -1.0,  1.0, -1.0, // 3
-        -1.0,  1.0,  1.0, // 7
-        1.0,  1.0,  1.0, // 6
-};
+void disableVAs()
+{
+    glDisableClientState(GL_VERTEX_ARRAY);
+}
+
+void bindVBOs()
+{
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+}
+
+void unbindVBOs()
+{
+    glBindBuffer(0, vbo);
+    glBindBuffer(0, ibo);
+}
+
+void buildVBOs()
+{
+    glGenBuffers(1, &vbo); //buffer for vertex
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, n_vertices * sizeof(Vertex), vertices, GL_STATIC_DRAW);
+
+    glGenBuffers(1, &ibo); //buffer for indice
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_indices * sizeof(unsigned int), indices, GL_STATIC_DRAW);
+}
+
+void enableVBOs()
+{
+    glEnableClientState(GL_VERTEX_ARRAY);
+
+}
+
+void disableVBOs()
+{
+    glDisableClientState(GL_VERTEX_ARRAY);
+
+}
 
 
-GLfloat colorsQuads[] = {
-        // Front
-        1.0, 1.0, 0.0, // 4
-        1.0, 0.0, 1.0, // 5
-        0.0, 1.0, 1.0, // 6
-        1.0, 1.0, 1.0, // 7
-        // Back
-        0.0, 0.0, 0.0, // 0
-        0.0, 0.0, 1.0, // 3
-        0.0, 1.0, 0.0, // 2
-        1.0, 0.0, 0.0, // 1
-        // Left
-        0.0, 0.0, 0.0, // 0
-        1.0, 1.0, 0.0, // 4
-        1.0, 1.0, 1.0, // 7
-        0.0, 0.0, 1.0, // 3
-        // Right
-        1.0, 0.0, 0.0, // 1
-        0.0, 1.0, 0.0, // 2
-        0.0, 1.0, 1.0, // 6
-        1.0, 0.0, 1.0, // 5
-        // Bottom
-        0.0, 0.0, 0.0, // 0
-        1.0, 0.0, 0.0, // 1
-        1.0, 0.0, 1.0, // 5
-        1.0, 1.0, 0.0, // 4
-        // Top
-        0.0, 1.0, 0.0, // 2
-        0.0, 0.0, 1.0, // 3
-        1.0, 1.0, 1.0, // 7
-        0.0, 1.0, 1.0, // 6
-};
+void drawGrid2D(int rows, int cols)
+{
+    glPushAttrib(GL_CURRENT_BIT);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glColor3f(1.0, 1.0, 1.0);
 
-GLuint indices1DArray[] = {
-        4, 5, 6, 7,   // Front
-        0, 3, 2, 1,   // Back
-        0, 4, 7, 3,   // Left
-        1, 2, 6, 5,   // Right
-        0, 1, 5, 4,   // Bottom
-        2, 3, 7, 6    // Top
-};
+    /* Grid */
+    float dy = 2.0f / (float) rows;
+    float dx = 2.0f / (float) cols;
+    for (int i = 0; i < cols; i++) {
+        float x = -1.0 + i * dx;
+        glBegin(GL_TRIANGLE_STRIP);
+        for (int j = 0; j <= rows; j++) {
+            float y = -1.0 + j * dy;
+            glVertex3f(x, y, 0.0);
+            glVertex3f(x + dx, y, 0.0);
+        }
+        glEnd();
+    }
 
-GLuint indices2DArray[][4] = {
-        { 4, 5, 6, 7 },  // Front
-        { 0, 3, 2, 1 },  // Back
-        { 0, 4, 7, 3 },  // Left
-        { 1, 2, 6, 5 },  // Right
-        { 0, 1, 5, 4 },  // Bottom
-        { 2, 3, 7, 6 }   // Top
-};
+    glPopAttrib();
+}
+
+void computeAndStoreGrid2D(int rows, int cols)
+{
+    n_vertices = (rows + 1) * (cols + 1);
+    n_indices = (rows + 1) * (cols - 1) * 2 + (rows + 1) * 2;
+    // or more simply: n_indices = n_vertices * 2;
+    free(vertices);
+    vertices = (Vertex *)malloc(n_vertices * sizeof(Vertex));
+    free(indices);
+    indices = (unsigned *)malloc(n_indices * sizeof(unsigned));
 
 
-GLuint frontIndices[] = { 4, 5, 6, 7 };
-GLuint backIndices[] = { 0, 3, 2, 1 };
-GLuint leftIndices[] = { 0, 4, 7, 3 };
-GLuint rightIndices[] = { 1, 2, 6, 5 };
-GLuint bottomIndices[] = { 0, 1, 5, 4 };
-GLuint topIndices[] = { 2, 3, 7, 6 };
+    /* Grid */
 
-const GLvoid* indices1DArrayOfArray[] = {
-        frontIndices,
-        backIndices,
-        leftIndices,
-        rightIndices,
-        bottomIndices,
-        topIndices
-};
+    /* Vertices */
+    float dy = 2.0f / (float) rows;
+    float dx = 2.0f / (float) cols;
+    Vertex *vtx = vertices;
+    for (int i = 0; i <= cols; i++) {
+        float x = -1.0 + i * dx;
+        for (int j = 0; j <= rows; j++) {
+            float y = -1.0 + j * dy;
+            vtx->r = (vec3f) { x, y, 0.0 };
+            vtx++;
+        }
+    }
 
-GLint indicesFirsts[] = { 0, 4, 8, 12, 16, 20 };
+    /* Indices */
+    unsigned *idx = indices;
+    for (int i = 0; i < cols; i++) {
+        for (int j = 0; j <= rows; j++) {
+            *idx++ = i * (rows + 1) + j;
+            *idx++ = (i + 1) * (rows + 1) + j;
+        }
+    }
 
-GLsizei indicesCounts[] = { 4, 4, 4, 4, 4, 4 };
+#define DEBUG_STORE_VERTICES
+#ifdef DEBUG_STORE_VERTICES
+    for (int i = 0; i <= cols; i++) {
+        for (int j = 0; j <= rows; j++) {
+            int idx = i * (rows + 1) + j;
+            printf("(%5.2f,%5.2f)", vertices[idx].r.x, vertices[idx].r.y);
+        }
+        printf("\n");
+    }
+    for (int i = 0; i < n_indices; i++) {
+        printf("%d ", indices[i]);
+    }
+    printf("\n");
+#endif
 
-const GLvoid* indicesOffsets[] = {
-        (GLvoid*)(0),
-        (GLvoid*)(4 * sizeof(GLuint)),
-        (GLvoid*)(8 * sizeof(GLuint)),
-        (GLvoid*)(12 * sizeof(GLuint)),
-        (GLvoid*)(16 * sizeof(GLuint)),
-        (GLvoid*)(20 * sizeof(GLuint)),
-};
+}
+#define DEBUG_DRAW_GRID_ARRAY
+void drawGrid2DStoredVertices(int rows, int cols)
+{
+    glPushAttrib(GL_CURRENT_BIT);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glColor3f(1.0, 1.0, 1.0);
 
-GLsizei numQuads = 6;
+    /* Grid */
+    for (int i = 0; i < cols; i++) {
+        glBegin(GL_TRIANGLE_STRIP);
+        for (int j = 0; j <= rows; j++) {
+            int idx = i * (rows + 1) + j;
+#ifdef DEBUG_DRAW_GRID_ARRAY
+            printf("%d %d %d %f %f\n", i, j, idx, vertices[idx].r.x, vertices[idx].r.y);
+#endif
+            glVertex3fv(&vertices[idx].r.x);
+            idx += rows + 1;
+#ifdef DEBUG_DRAW_GRID_ARRAY
+            printf("%d %d %d %f %f\n", i, j, idx, vertices[idx].r.x, vertices[idx].r.y);
+#endif
+            glVertex3fv(&vertices[idx].r.x);
+        }
+        glEnd();
+    }
 
-#define VERTICES 0
-#define VERTICES_QUADS 1
-#define COLORS 2
-#define COLORS_QUADS 3
-#define INDICES 4
-#define NUM_BUFFERS 5
+    glPopAttrib();
+}
 
-GLuint buffers[NUM_BUFFERS];
+void drawGrid2DStoredVerticesAndIndices(int rows, int cols)
+{
+    glPushAttrib(GL_CURRENT_BIT);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glColor3f(1.0, 1.0, 1.0);
+
+    /* Grid */
+    unsigned  *idx = indices;
+    for (int i = 0; i < cols; i++) {
+        glBegin(GL_TRIANGLE_STRIP);
+        for (int j = 0; j <= rows; j++) {
+            glVertex3fv(&vertices[*idx].r.x);
+            printf("%d %d %d %f %f\n", i, j, *idx, vertices[*idx].r.x, vertices[*idx].r.y);
+
+            idx++;
+
+            glVertex3fv(&vertices[*idx].r.x);
+            printf("%d %d %d %f %f\n", i, j, *idx, vertices[*idx].r.x, vertices[*idx].r.y);
+
+            idx++;
+        }
+        glEnd();
+    }
+
+    glPopAttrib();
+}
+
+void drawGrid2DVAs(int rows, int cols)
+{
+    glPushAttrib(GL_CURRENT_BIT);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glColor3f(1.0, 1.0, 1.0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glVertexPointer(3, GL_FLOAT,sizeof(Vertex), &vertices[0].r);
+
+    for (int i = 0; i < cols; i++)
+        glDrawElements(GL_TRIANGLE_STRIP, (rows + 1) * 2, GL_UNSIGNED_INT, &indices[i * (rows + 1) * 2]);
+
+    glPopAttrib();
+}
+
+void drawGrid2DVBOs(int rows, int cols)
+{
+    glPushAttrib(GL_CURRENT_BIT);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glColor3f(1.0, 1.0, 1.0);
+
+    bindVBOs();
+    glVertexPointer(3, GL_FLOAT,sizeof(Vertex), BUFFER_OFFSET(0));
+    /* Grid */
+    for (int i = 0; i < cols; i++) {
+        glDrawElements(GL_TRIANGLE_STRIP, (rows + 1) * 2, GL_UNSIGNED_INT, BUFFER_OFFSET(i * (rows + 1) * 2 * sizeof(unsigned int)));
+    }
+    unbindVBOs();
+    glPopAttrib();
+}
+
+
 
 void checkForGLerrors(int lineno)
 {
@@ -260,151 +300,107 @@ void checkForGLerrors(int lineno)
         printf("%d: %s\n", lineno, gluErrorString(error));
 }
 
-void enableVertexArrays(void)
-{
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glEnableClientState(GL_COLOR_ARRAY);
-}
-
-void disableVertexArrays(void)
-{
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
-}
-
-void generateBuffers(void)
-{
-    glGenBuffers(NUM_BUFFERS, buffers);
-}
-
-void bufferData()
-{
-    glBindBuffer(GL_ARRAY_BUFFER, buffers[VERTICES_QUADS]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesQuads), verticesQuads, GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, buffers[VERTICES]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, buffers[COLORS]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, buffers[COLORS_QUADS]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(colorsQuads), colorsQuads, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[INDICES]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices2DArray),
-                 indices2DArray, GL_STATIC_DRAW);
-}
-
-void unBindBuffers()
-{
-    int buffer;
-
-    glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &buffer);
-    if (buffer != 0)
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &buffer);
-    if (buffer != 0)
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-}
-
 
 /* Immediate mode, vertex at a time */
 void renderCubeIM()
 {
-    int i, j;
-
-    glBegin(GL_QUADS);
-    for (i = 0; i < numQuads; i++)
-        for (j = 0; j < 4; j++) {
-            glColor3fv(&colors[indices1DArray[i*4+j]*3]);
-            glVertex3fv(&vertices[indices1DArray[i*4+j]*3]);
-        }
-    glEnd();
+//    int i, j;
+//
+//    glBegin(GL_QUADS);
+//    for (i = 0; i < numQuads; i++)
+//        for (j = 0; j < 4; j++) {
+//            glColor3fv(&colors[indices1DArray[i*4+j]*3]);
+//            glVertex3fv(&vertices[indices1DArray[i*4+j]*3]);
+//        }
+//    glEnd();
 }
 
 /* Use VAs or VBOs */
 void renderCubeVAVBO()
 {
-    int i, j;
-
-    /* Bind/unbind buffers and set vertex and color array pointers */
-    switch (derefMethod) {
-        case DRAWARRAYS:
-        case MULTIDRAWARRAYS:
-            if (renMode == VERTEX_ARRAY) {
-                glBindBuffer(GL_ARRAY_BUFFER, 0);
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-                glVertexPointer(3, GL_FLOAT, 0, verticesQuads);
-                glColorPointer(3, GL_FLOAT, 0, colorsQuads);
-            } else if (renMode == VERTEX_BUFFER_OBJECT) {
-                glBindBuffer(GL_ARRAY_BUFFER, buffers[VERTICES_QUADS]);
-                glVertexPointer(3, GL_FLOAT, 0, 0);
-                glBindBuffer(GL_ARRAY_BUFFER, buffers[COLORS_QUADS]);
-                glColorPointer(3, GL_FLOAT, 0, 0);
-            }
-            break;
-        case ARRAYELEMENT:
-        case DRAWELEMENTS:
-        case DRAWELEMENTSALL:
-        case MULTIDRAWELEMENTS:
-            if (renMode == VERTEX_ARRAY) {
-                glBindBuffer(GL_ARRAY_BUFFER, 0);
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-                glVertexPointer(3, GL_FLOAT, 0, vertices);
-                glColorPointer(3, GL_FLOAT, 0, colors);
-            }  if (renMode == VERTEX_BUFFER_OBJECT) {
-        glBindBuffer(GL_ARRAY_BUFFER, buffers[VERTICES]);
-        glVertexPointer(3, GL_FLOAT, 0, 0);
-        glBindBuffer(GL_ARRAY_BUFFER, buffers[COLORS]);
-        glColorPointer(3, GL_FLOAT, 0, 0);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[INDICES]);
-    }
-            break;
-    }
-
-    /* Render using chosen dereference technique. */
-    switch (derefMethod) {
-        case DRAWARRAYS:
-            glDrawArrays(GL_QUADS, 0, 24);
-            break;
-        case MULTIDRAWARRAYS:
-            /* Just an example to demonstrate usage - no advantage to use
-             * glMultiDrawArrays for cube as all primitives are quads and same
-             * size so glDrawArrays does the job.
-             */
-            glMultiDrawArrays(GL_QUADS, indicesFirsts, indicesCounts, numQuads);
-            break;
-        case ARRAYELEMENT:
-            glBegin(GL_QUADS);
-            for (i = 0; i < numQuads; i++)
-                for (j = 0; j < 4; j++)
-                    glArrayElement(((GLuint*)indices1DArrayOfArray[i])[j]);
-            glEnd();
-            break;
-        case DRAWELEMENTS:
-            for (i = 0; i < numQuads; i++)
-                if (renMode == VERTEX_ARRAY)
-                    /* Can use either indices1DArray or indices2DArrays */
-                    glDrawElements(GL_QUADS, 4, GL_UNSIGNED_INT, &indices1DArray[i*4]);
-                else  if (renMode == VERTEX_BUFFER_OBJECT)
-                    glDrawElements(GL_QUADS, 4, GL_UNSIGNED_INT, indicesOffsets[i]);
-            break;
-        case DRAWELEMENTSALL:
-            if (renMode == VERTEX_ARRAY)
-                glDrawElements(GL_QUADS, 24, GL_UNSIGNED_INT, indices1DArray);
-            else  if (renMode == VERTEX_BUFFER_OBJECT)
-                glDrawElements(GL_QUADS, 24, GL_UNSIGNED_INT, 0);
-            break;
-        case MULTIDRAWELEMENTS:
-            /* Another example just to demonstrate usage.  Like
-             * glMultiDrawArrays, no advantage using the 'multi' version for
-             * cube consisting of quads as all same size.
-             */
-            if (renMode == VERTEX_ARRAY)
-                glMultiDrawElements(GL_QUADS, indicesCounts, GL_UNSIGNED_INT,
-                                    indices1DArrayOfArray, numQuads);
-            else  if (renMode == VERTEX_BUFFER_OBJECT)
-                glMultiDrawElements(GL_QUADS, indicesCounts, GL_UNSIGNED_INT,
-                                    indicesOffsets, numQuads);
-            break;
-    }
+//    int i, j;
+//
+//    /* Bind/unbind buffers and set vertex and color array pointers */
+//    switch (derefMethod) {
+//        case DRAWARRAYS:
+//        case MULTIDRAWARRAYS:
+//            if (renMode == VERTEX_ARRAY) {
+//                glBindBuffer(GL_ARRAY_BUFFER, 0);
+//                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+//                glVertexPointer(3, GL_FLOAT, 0, verticesQuads);
+//                glColorPointer(3, GL_FLOAT, 0, colorsQuads);
+//            } else if (renMode == VERTEX_BUFFER_OBJECT) {
+//                glBindBuffer(GL_ARRAY_BUFFER, buffers[VERTICES_QUADS]);
+//                glVertexPointer(3, GL_FLOAT, 0, 0);
+//                glBindBuffer(GL_ARRAY_BUFFER, buffers[COLORS_QUADS]);
+//                glColorPointer(3, GL_FLOAT, 0, 0);
+//            }
+//            break;
+//        case ARRAYELEMENT:
+//        case DRAWELEMENTS:
+//        case DRAWELEMENTSALL:
+//        case MULTIDRAWELEMENTS:
+//            if (renMode == VERTEX_ARRAY) {
+//                glBindBuffer(GL_ARRAY_BUFFER, 0);
+//                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+//                glVertexPointer(3, GL_FLOAT, 0, vertices);
+//                glColorPointer(3, GL_FLOAT, 0, colors);
+//            }  if (renMode == VERTEX_BUFFER_OBJECT) {
+//        glBindBuffer(GL_ARRAY_BUFFER, buffers[VERTICES]);
+//        glVertexPointer(3, GL_FLOAT, 0, 0);
+//        glBindBuffer(GL_ARRAY_BUFFER, buffers[COLORS]);
+//        glColorPointer(3, GL_FLOAT, 0, 0);
+//        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[INDICES]);
+//    }
+//            break;
+//    }
+//
+//    /* Render using chosen dereference technique. */
+//    switch (derefMethod) {
+//        case DRAWARRAYS:
+//            glDrawArrays(GL_QUADS, 0, 24);
+//            break;
+//        case MULTIDRAWARRAYS:
+//            /* Just an example to demonstrate usage - no advantage to use
+//             * glMultiDrawArrays for cube as all primitives are quads and same
+//             * size so glDrawArrays does the job.
+//             */
+//            glMultiDrawArrays(GL_QUADS, indicesFirsts, indicesCounts, numQuads);
+//            break;
+//        case ARRAYELEMENT:
+//            glBegin(GL_QUADS);
+//            for (i = 0; i < numQuads; i++)
+//                for (j = 0; j < 4; j++)
+//                    glArrayElement(((GLuint*)indices1DArrayOfArray[i])[j]);
+//            glEnd();
+//            break;
+//        case DRAWELEMENTS:
+//            for (i = 0; i < numQuads; i++)
+//                if (renMode == VERTEX_ARRAY)
+//                    /* Can use either indices1DArray or indices2DArrays */
+//                    glDrawElements(GL_QUADS, 4, GL_UNSIGNED_INT, &indices1DArray[i*4]);
+//                else  if (renMode == VERTEX_BUFFER_OBJECT)
+//                    glDrawElements(GL_QUADS, 4, GL_UNSIGNED_INT, indicesOffsets[i]);
+//            break;
+//        case DRAWELEMENTSALL:
+//            if (renMode == VERTEX_ARRAY)
+//                glDrawElements(GL_QUADS, 24, GL_UNSIGNED_INT, indices1DArray);
+//            else  if (renMode == VERTEX_BUFFER_OBJECT)
+//                glDrawElements(GL_QUADS, 24, GL_UNSIGNED_INT, 0);
+//            break;
+//        case MULTIDRAWELEMENTS:
+//            /* Another example just to demonstrate usage.  Like
+//             * glMultiDrawArrays, no advantage using the 'multi' version for
+//             * cube consisting of quads as all same size.
+//             */
+//            if (renMode == VERTEX_ARRAY)
+//                glMultiDrawElements(GL_QUADS, indicesCounts, GL_UNSIGNED_INT,
+//                                    indices1DArrayOfArray, numQuads);
+//            else  if (renMode == VERTEX_BUFFER_OBJECT)
+//                glMultiDrawElements(GL_QUADS, indicesCounts, GL_UNSIGNED_INT,
+//                                    indicesOffsets, numQuads);
+//            break;
+//    }
 }
 
 
@@ -433,10 +429,8 @@ void init(void)
 {
     glShadeModel (GL_FLAT);
     glColor3f(1.0, 1.0, 1.0);
-    generateBuffers();
-    enableVertexArrays();
-    bufferData();
-    unBindBuffers();
+    computeAndStoreGrid2D(rows, cols);
+    buildVBOs();
 }
 
 
@@ -481,39 +475,6 @@ void DrawAxes(float len) {
     glEnd();
 }
 
-void DrawRobotArm()
-{
-    glPushMatrix();
-    // Shoulder
-    glTranslatef(7.0, 4.0, 0.0);
-    glRotatef(shoulder, 0.0, 0.0, 1.0);
-    // Upper arm
-    glTranslatef(2.0, 0.0, 0.0);
-    myWireDiamond(4.0, 2.0);
-    // Elbow
-    glTranslatef(2.0, 0.0, 0.0);
-    glRotatef(elbow, 0.0, 0.0, 1.0);
-    // Lower arm
-    glTranslatef(0.0, -2.0, 0.0);
-    myWireDiamond(2.0, 4.0);
-    // Wrist
-    glTranslatef(0.0, -2.0, 0.0);
-    glRotatef(wrist, 0.0, 0.0, 1.0);
-    // Hand
-    glTranslatef(0.0, -0.25, 0.0);
-    myWireBox(2.0, 0.5);
-    // Gripper: left and right plates
-    glPushMatrix();
-    glTranslatef(-0.7+left_plate, -1.0, 0.0);
-    myWireBox(0.5, 1.25);
-    glPopMatrix();
-    glPushMatrix();
-    glTranslatef(0.75-right_plate, -1.0, 0.0);
-    myWireBox(0.5, 1.25);
-    glPopMatrix();
-    glPopMatrix();
-}
-// Draws a robot arm
 void display(void)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -525,7 +486,33 @@ void display(void)
     glRotatef(-30.0, 0.0, 1.0, 0.0);
     glScalef(0.5, 0.5, 0.5);
 
-//    DrawAxes(1);
+    // Draw grid
+    printf("mode %d\n", mode);
+    switch (mode) {
+        case IM:
+            drawGrid2D(rows, cols);
+            break;
+        case SA:
+            drawGrid2DStoredVertices(rows, cols);
+            break;
+        case SAI:
+            drawGrid2DStoredVerticesAndIndices(rows, cols);
+            break;
+        case VA:
+            enableVAs();
+            drawGrid2DVAs(rows, cols);
+            disableVAs();
+            break;
+        case VBO:
+            enableVBOs();
+            drawGrid2DVBOs(rows, cols);
+            disableVBOs();
+            break;
+        case nM:
+            break;
+    }
+
+    DrawAxes(1);
 //    DrawRobotArm();
     if (renMode == IMMEDIATE_MODE)
         renderCubeIM();
@@ -567,34 +554,22 @@ void keyDown(SDL_KeyboardEvent *e)
             break;
         case SDLK_LCTRL:
             printf("LCTRL\n");
-        case SDLK_s:
-            if (e->keysym.mod & (KMOD_LSHIFT | KMOD_RSHIFT | KMOD_CAPS))
-                shoulder = ((int)shoulder + 5) % 360;
-            else
-                shoulder = ((int)shoulder - 5) % 360;
-            postRedisplay();
             break;
-        case SDLK_e:
-            if (e->keysym.mod & (KMOD_LSHIFT | KMOD_RSHIFT | KMOD_CAPS))
-                elbow = ((int)elbow + 5) % 360;
-            else
-                elbow = ((int)elbow - 5) % 360;
-            postRedisplay();
+
+        case SDLK_m:
+            if (mode == VA)
+                disableVAs();
+            if (mode == VBO)
+                disableVBOs();
+
+            if (mode >= nM)
+                mode = IM;
+            if (mode == VA)
+                enableVAs();
+            if (mode == VBO)
+                enableVBOs();
             break;
-        case SDLK_l:
-            if (e->keysym.mod & (KMOD_LSHIFT | KMOD_RSHIFT | KMOD_CAPS))
-                left_plate += gripper_increment;
-            else
-                left_plate -= gripper_increment;
-            postRedisplay();
-            break;
-        case SDLK_r:
-            if (e->keysym.mod & (KMOD_LSHIFT | KMOD_RSHIFT | KMOD_CAPS))
-                right_plate += gripper_increment;
-            else
-                right_plate -= gripper_increment;
-            postRedisplay();
-            break;
+
         default:
             break;
     }
@@ -603,6 +578,7 @@ void keyDown(SDL_KeyboardEvent *e)
 // Key up events
 void keyUp(SDL_KeyboardEvent *e)
 {
+
 }
 
 void eventDispatcher()
