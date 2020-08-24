@@ -43,6 +43,14 @@ typedef struct {
 
 global_t g = {0, 0, 0, 0, 0, 0, true, 0, 0, 0.2, 0, false};
 
+typedef struct {
+    float x;
+    float y;
+    float z;
+} Camera;
+
+Camera camera = {0,0,0};
+
 typedef struct { float x, y; } vec2f;
 
 // Globals
@@ -80,9 +88,9 @@ Vertex *vertices;
 unsigned *indices;
 unsigned n_vertices, n_indices;
 unsigned vbo, ibo;
-unsigned rows = 4, cols = 4;
+unsigned rows = 50, cols = 50;
 
-enum { IM = 0, SA, SAI, VA, VBO, nM } mode = IM;
+enum { IM = 0, SA, SAI, VA, VBO, nM } mode = VBO;
 
 void enableVAs()
 {
@@ -153,6 +161,11 @@ void drawGrid2D(int rows, int cols)
     glPopAttrib();
 }
 
+float rand01() {
+    return rand() / (float) RAND_MAX;
+
+}
+
 void computeAndStoreGrid2D(int rows, int cols)
 {
     n_vertices = (rows + 1) * (cols + 1);
@@ -167,14 +180,14 @@ void computeAndStoreGrid2D(int rows, int cols)
     /* Grid */
 
     /* Vertices */
-    float dy = 2.0f / (float) rows;
-    float dx = 2.0f / (float) cols;
+    float dy = 20 / (float) rows;
+    float dx = 20 / (float) cols;
     Vertex *vtx = vertices;
     for (int i = 0; i <= cols; i++) {
         float x = -1.0 + i * dx;
         for (int j = 0; j <= rows; j++) {
-            float y = -1.0 + j * dy;
-            vtx->r = (vec3f) { x, y, 0.0 };
+            float z = -1.0 + j * dy;
+            vtx->r = (vec3f) { x,rand01() , z};
             vtx++;
         }
     }
@@ -193,7 +206,7 @@ void computeAndStoreGrid2D(int rows, int cols)
     for (int i = 0; i <= cols; i++) {
         for (int j = 0; j <= rows; j++) {
             int idx = i * (rows + 1) + j;
-            printf("(%5.2f,%5.2f)", vertices[idx].r.x, vertices[idx].r.y);
+            printf("(%5.2f,%5.2f)", vertices[idx].r.x, vertices[idx].r.z);
         }
         printf("\n");
     }
@@ -481,10 +494,13 @@ void display(void)
 
     glColor3f(1.0, 1.0, 1.0);
 
+    glPushMatrix();
     /* Oblique view, scale cube */
-    glRotatef(15.0, 1.0, 0.0, 0.0);
-    glRotatef(-30.0, 0.0, 1.0, 0.0);
-    glScalef(0.5, 0.5, 0.5);
+    glTranslated(camera.x,0,camera.z);
+    glRotatef(35.0, 1.0, 0.0, 0.0);
+    glRotatef(45.0, 0.0, 1.0, 0.0);
+    glScalef(1.5, 1.5 , 1.5);
+
 
     // Draw grid
     printf("mode %d\n", mode);
@@ -519,6 +535,7 @@ void display(void)
     else if (renMode == VERTEX_ARRAY || renMode == VERTEX_BUFFER_OBJECT)
         renderCubeVAVBO();
     // Does the same thing as glutSwapBuffers
+    glPopMatrix();
     SDL_GL_SwapWindow(window);
 
     // Check for OpenGL errors at least once per frame
@@ -530,19 +547,23 @@ void display(void)
 
 void reshape(int w, int h)
 {
-//    glViewport(0, 0, (GLsizei) w, (GLsizei) h);
-//    glMatrixMode(GL_PROJECTION);
-//    glLoadIdentity();
-//    glOrtho(-5.0, 20.0, -5.0, 20.0, 0.1, 100.0);
-//    glMatrixMode(GL_MODELVIEW);
-//    glLoadIdentity();
-//    glTranslatef (0.0, 0.0, -5.0);
-
-    glViewport (0, 0, (GLsizei) w, (GLsizei) h);
+    glViewport(0, 0, (GLsizei) w, (GLsizei) h);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
+    glOrtho(-5.0, 20.0, -5.0, 20.0, 0.1, 100.0);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+    glTranslatef (0.0, 10.0, -15.0);
+
+//    glViewport (0, 0, (GLsizei) w, (GLsizei) h);
+//    glMatrixMode(GL_PROJECTION);
+//    glLoadIdentity();
+//    glMatrixMode(GL_MODELVIEW);
+//    glLoadIdentity();
+//
+//    glMatrixMode(GL_PROJECTION);
+//    glOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
+//    glMatrixMode(GL_MODELVIEW);
 }
 
 // Key down events
@@ -554,6 +575,22 @@ void keyDown(SDL_KeyboardEvent *e)
             break;
         case SDLK_LCTRL:
             printf("LCTRL\n");
+            break;
+
+        case SDLK_w:
+            camera.x++;
+            break;
+
+        case SDLK_s:
+            camera.x--;
+            break;
+
+        case SDLK_a:
+            camera.z++;
+            break;
+
+        case SDLK_d:
+            camera.z--;
             break;
 
         case SDLK_m:
@@ -573,6 +610,8 @@ void keyDown(SDL_KeyboardEvent *e)
         default:
             break;
     }
+
+    postRedisplay();
 }
 
 // Key up events
