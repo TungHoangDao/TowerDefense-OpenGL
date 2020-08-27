@@ -76,22 +76,9 @@ include CMakeFiles/TowerDefenseSDL.dir/progress.make
 # Include the compile flags for this target's objects.
 include CMakeFiles/TowerDefenseSDL.dir/flags.make
 
-CMakeFiles/TowerDefenseSDL.dir/main.cpp.obj: CMakeFiles/TowerDefenseSDL.dir/flags.make
-CMakeFiles/TowerDefenseSDL.dir/main.cpp.obj: ../main.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=C:\Users\61416\CLionProjects\TowerDefenseSDL\cmake-build-debug\CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/TowerDefenseSDL.dir/main.cpp.obj"
-	C:\MinGW\bin\g++.exe  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles\TowerDefenseSDL.dir\main.cpp.obj -c C:\Users\61416\CLionProjects\TowerDefenseSDL\main.cpp
-
-CMakeFiles/TowerDefenseSDL.dir/main.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/TowerDefenseSDL.dir/main.cpp.i"
-	C:\MinGW\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E C:\Users\61416\CLionProjects\TowerDefenseSDL\main.cpp > CMakeFiles\TowerDefenseSDL.dir\main.cpp.i
-
-CMakeFiles/TowerDefenseSDL.dir/main.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/TowerDefenseSDL.dir/main.cpp.s"
-	C:\MinGW\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S C:\Users\61416\CLionProjects\TowerDefenseSDL\main.cpp -o CMakeFiles\TowerDefenseSDL.dir\main.cpp.s
-
 CMakeFiles/TowerDefenseSDL.dir/Global.cpp.obj: CMakeFiles/TowerDefenseSDL.dir/flags.make
 CMakeFiles/TowerDefenseSDL.dir/Global.cpp.obj: ../Global.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=C:\Users\61416\CLionProjects\TowerDefenseSDL\cmake-build-debug\CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/TowerDefenseSDL.dir/Global.cpp.obj"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=C:\Users\61416\CLionProjects\TowerDefenseSDL\cmake-build-debug\CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/TowerDefenseSDL.dir/Global.cpp.obj"
 	C:\MinGW\bin\g++.exe  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles\TowerDefenseSDL.dir\Global.cpp.obj -c C:\Users\61416\CLionProjects\TowerDefenseSDL\Global.cpp
 
 CMakeFiles/TowerDefenseSDL.dir/Global.cpp.i: cmake_force
@@ -102,21 +89,64 @@ CMakeFiles/TowerDefenseSDL.dir/Global.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/TowerDefenseSDL.dir/Global.cpp.s"
 	C:\MinGW\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S C:\Users\61416\CLionProjects\TowerDefenseSDL\Global.cpp -o CMakeFiles\TowerDefenseSDL.dir\Global.cpp.s
 
+CMakeFiles/TowerDefenseSDL.dir/Timer.cpp.obj: CMakeFiles/TowerDefenseSDL.dir/flags.make
+CMakeFiles/TowerDefenseSDL.dir/Timer.cpp.obj: ../Timer.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=C:\Users\61416\CLionProjects\TowerDefenseSDL\cmake-build-debug\CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/TowerDefenseSDL.dir/Timer.cpp.obj"
+	C:\MinGW\bin\g++.exe  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles\TowerDefenseSDL.dir\Timer.cpp.obj -c C:\Users\61416\CLionProjects\TowerDefenseSDL\Timer.cpp
+
+CMakeFiles/TowerDefenseSDL.dir/Timer.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/TowerDefenseSDL.dir/Timer.cpp.i"
+	C:\MinGW\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E C:\Users\61416\CLionProjects\TowerDefenseSDL\Timer.cpp > CMakeFiles\TowerDefenseSDL.dir\Timer.cpp.i
+
+CMakeFiles/TowerDefenseSDL.dir/Timer.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/TowerDefenseSDL.dir/Timer.cpp.s"
+	C:\MinGW\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S C:\Users\61416\CLionProjects\TowerDefenseSDL\Timer.cpp -o CMakeFiles\TowerDefenseSDL.dir\Timer.cpp.s
+
+CMakeFiles/TowerDefenseSDL.dir/Demo.cpp.obj: CMakeFiles/TowerDefenseSDL.dir/flags.make
+CMakeFiles/TowerDefenseSDL.dir/Demo.cpp.obj: ../Demo.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=C:\Users\61416\CLionProjects\TowerDefenseSDL\cmake-build-debug\CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/TowerDefenseSDL.dir/Demo.cpp.obj"
+	C:\MinGW\bin\g++.exe  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles\TowerDefenseSDL.dir\Demo.cpp.obj -c C:\Users\61416\CLionProjects\TowerDefenseSDL\Demo.cpp
+
+CMakeFiles/TowerDefenseSDL.dir/Demo.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/TowerDefenseSDL.dir/Demo.cpp.i"
+	C:\MinGW\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E C:\Users\61416\CLionProjects\TowerDefenseSDL\Demo.cpp > CMakeFiles\TowerDefenseSDL.dir\Demo.cpp.i
+
+CMakeFiles/TowerDefenseSDL.dir/Demo.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/TowerDefenseSDL.dir/Demo.cpp.s"
+	C:\MinGW\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S C:\Users\61416\CLionProjects\TowerDefenseSDL\Demo.cpp -o CMakeFiles\TowerDefenseSDL.dir\Demo.cpp.s
+
+CMakeFiles/TowerDefenseSDL.dir/WaveFunc.cpp.obj: CMakeFiles/TowerDefenseSDL.dir/flags.make
+CMakeFiles/TowerDefenseSDL.dir/WaveFunc.cpp.obj: ../WaveFunc.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=C:\Users\61416\CLionProjects\TowerDefenseSDL\cmake-build-debug\CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/TowerDefenseSDL.dir/WaveFunc.cpp.obj"
+	C:\MinGW\bin\g++.exe  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles\TowerDefenseSDL.dir\WaveFunc.cpp.obj -c C:\Users\61416\CLionProjects\TowerDefenseSDL\WaveFunc.cpp
+
+CMakeFiles/TowerDefenseSDL.dir/WaveFunc.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/TowerDefenseSDL.dir/WaveFunc.cpp.i"
+	C:\MinGW\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E C:\Users\61416\CLionProjects\TowerDefenseSDL\WaveFunc.cpp > CMakeFiles\TowerDefenseSDL.dir\WaveFunc.cpp.i
+
+CMakeFiles/TowerDefenseSDL.dir/WaveFunc.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/TowerDefenseSDL.dir/WaveFunc.cpp.s"
+	C:\MinGW\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S C:\Users\61416\CLionProjects\TowerDefenseSDL\WaveFunc.cpp -o CMakeFiles\TowerDefenseSDL.dir\WaveFunc.cpp.s
+
 # Object files for target TowerDefenseSDL
 TowerDefenseSDL_OBJECTS = \
-"CMakeFiles/TowerDefenseSDL.dir/main.cpp.obj" \
-"CMakeFiles/TowerDefenseSDL.dir/Global.cpp.obj"
+"CMakeFiles/TowerDefenseSDL.dir/Global.cpp.obj" \
+"CMakeFiles/TowerDefenseSDL.dir/Timer.cpp.obj" \
+"CMakeFiles/TowerDefenseSDL.dir/Demo.cpp.obj" \
+"CMakeFiles/TowerDefenseSDL.dir/WaveFunc.cpp.obj"
 
 # External object files for target TowerDefenseSDL
 TowerDefenseSDL_EXTERNAL_OBJECTS =
 
-TowerDefenseSDL.exe: CMakeFiles/TowerDefenseSDL.dir/main.cpp.obj
 TowerDefenseSDL.exe: CMakeFiles/TowerDefenseSDL.dir/Global.cpp.obj
+TowerDefenseSDL.exe: CMakeFiles/TowerDefenseSDL.dir/Timer.cpp.obj
+TowerDefenseSDL.exe: CMakeFiles/TowerDefenseSDL.dir/Demo.cpp.obj
+TowerDefenseSDL.exe: CMakeFiles/TowerDefenseSDL.dir/WaveFunc.cpp.obj
 TowerDefenseSDL.exe: CMakeFiles/TowerDefenseSDL.dir/build.make
 TowerDefenseSDL.exe: CMakeFiles/TowerDefenseSDL.dir/linklibs.rsp
 TowerDefenseSDL.exe: CMakeFiles/TowerDefenseSDL.dir/objects1.rsp
 TowerDefenseSDL.exe: CMakeFiles/TowerDefenseSDL.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=C:\Users\61416\CLionProjects\TowerDefenseSDL\cmake-build-debug\CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking CXX executable TowerDefenseSDL.exe"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=C:\Users\61416\CLionProjects\TowerDefenseSDL\cmake-build-debug\CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Linking CXX executable TowerDefenseSDL.exe"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles\TowerDefenseSDL.dir\link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

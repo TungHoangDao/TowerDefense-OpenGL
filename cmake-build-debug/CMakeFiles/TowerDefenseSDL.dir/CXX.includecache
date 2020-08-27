@@ -6,7 +6,7 @@
 
 #IncludeRegexTransform: 
 
-C:/Users/61416/CLionProjects/TowerDefenseSDL/main.cpp
+C:/Users/61416/CLionProjects/TowerDefenseSDL/Demo.cpp
 GL/glew.h
 -
 GL/gl.h
@@ -24,5 +24,21 @@ stdlib.h
 math.h
 -
 cstdio
+-
+iostream
+-
+sstream
+-
+iomanip
+-
+cstdlib
+-
+Timer.h
+C:/Users/61416/CLionProjects/TowerDefenseSDL/Timer.h
+
+C:/Users/61416/CLionProjects/TowerDefenseSDL/Timer.h
+windows.h
+-
+sys/time.h
 -
 

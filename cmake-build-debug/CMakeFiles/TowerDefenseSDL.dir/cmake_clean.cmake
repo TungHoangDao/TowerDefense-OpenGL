@@ -1,6 +1,8 @@
 file(REMOVE_RECURSE
+  "CMakeFiles/TowerDefenseSDL.dir/Demo.cpp.obj"
   "CMakeFiles/TowerDefenseSDL.dir/Global.cpp.obj"
-  "CMakeFiles/TowerDefenseSDL.dir/main.cpp.obj"
+  "CMakeFiles/TowerDefenseSDL.dir/Timer.cpp.obj"
+  "CMakeFiles/TowerDefenseSDL.dir/WaveFunc.cpp.obj"
   "TowerDefenseSDL.exe"
   "TowerDefenseSDL.exe.manifest"
   "TowerDefenseSDL.pdb"

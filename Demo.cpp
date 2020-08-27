@@ -9,15 +9,14 @@
  *
  * Originally based on the Redbook robot arm example.
  */
-//#define GLEW_STATIC
-//#include <GL/glew.h>
-#define GL_GLEXT_PROTOTYPES
+#define GLEW_STATIC
+#include <GL/glew.h>
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GL/glut.h>
 #include <SDL2/SDL.h>
 #include <stdbool.h>
-#include "glExtension.h"
+//#include "glExtension.h"
 #include <stdlib.h>
 #include <math.h>
 #include <cstdio>
@@ -630,12 +629,16 @@ void display(void)
 
     glColor3f(1.0, 1.0, 1.0);
 
+    // save the initial ModelView matrix before modifying ModelView matrix
     glPushMatrix();
-    /* Oblique view, scale cube */
-    glTranslated(camera.x,0,camera.z);
-    glRotatef(35.0, 1.0, 0.0, 0.0);
-    glRotatef(45.0, 0.0, 1.0, 0.0);
-    glScalef(1.5, 1.5 , 1.5);
+
+    // tramsform camera
+    glTranslatef(0, 0, -cameraDistance);
+    glRotatef(cameraAngleX, 1, 0, 0);   // pitch
+    glRotatef(cameraAngleY, 0, 1, 0);   // heading
+
+    // transform teapot
+    glTranslatef(0, -1.57f, 0);
 
 
     // Draw grid
@@ -681,25 +684,51 @@ void display(void)
     }
 }
 
-void reshape(int w, int h)
+
+
+///////////////////////////////////////////////////////////////////////////////
+// initialize global variables
+///////////////////////////////////////////////////////////////////////////////
+bool initSharedMem()
 {
-    glViewport(0, 0, (GLsizei) w, (GLsizei) h);
+    screenWidth = SCREEN_WIDTH;
+    screenHeight = SCREEN_HEIGHT;
+
+    mouseLeftDown = mouseRightDown = false;
+    mouseX = mouseY = 0;
+
+    cameraAngleX = cameraAngleY = 0.0f;
+    cameraDistance = CAMERA_DISTANCE;
+
+    drawMode = 0; // 0:fill, 1: wireframe, 2:points
+    drawTime = updateTime = 0;
+    return true;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+// set the projection matrix as perspective
+///////////////////////////////////////////////////////////////////////////////
+void toPerspective()
+{
+    // set viewport to be the entire window
+    glViewport(0, 0, (GLsizei)screenWidth, (GLsizei)screenHeight);
+
+    // set perspective viewing frustum
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(-5.0, 20.0, -5.0, 20.0, 0.1, 100.0);
+    gluPerspective(45.0f, (float)(screenWidth)/screenHeight, 1.0f, 1000.0f); // FOV, AspectRatio, NearClip, FarClip
+
+    // switch to modelview matrix in order to set scene
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    glTranslatef (0.0, 10.0, -15.0);
+}
 
-//    glViewport (0, 0, (GLsizei) w, (GLsizei) h);
-//    glMatrixMode(GL_PROJECTION);
-//    glLoadIdentity();
-//    glMatrixMode(GL_MODELVIEW);
-//    glLoadIdentity();
-//
-//    glMatrixMode(GL_PROJECTION);
-//    glOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
-//    glMatrixMode(GL_MODELVIEW);
+void reshape(int w, int h)
+{
+    screenWidth = w;
+    screenHeight = h;
+    toPerspective();
 }
 
 // Key down events
@@ -756,6 +785,50 @@ void keyUp(SDL_KeyboardEvent *e)
 
 }
 
+
+void mouseCB(int button, int state, int x, int y)
+{
+    mouseX = x;
+    mouseY = y;
+
+    if(button == 1)
+    {
+        if(state == SDL_MOUSEBUTTONDOWN)
+        {
+            mouseLeftDown = true;
+        }
+        else if(state == SDL_MOUSEBUTTONUP)
+            mouseLeftDown = false;
+    }
+
+    else if(button == 3)
+    {
+        if(state == SDL_MOUSEBUTTONDOWN)
+        {
+            mouseRightDown = true;
+        }
+        else if(state == SDL_MOUSEBUTTONUP)
+            mouseRightDown = false;
+    }
+}
+
+
+void mouseMotionCB(int x, int y)
+{
+    if(mouseLeftDown)
+    {
+        cameraAngleY += (x - mouseX);
+        cameraAngleX += (y - mouseY);
+        mouseX = x;
+        mouseY = y;
+    }
+    if(mouseRightDown)
+    {
+        cameraDistance -= (y - mouseY) * 0.2f;
+        mouseY = y;
+    }
+}
+
 void eventDispatcher()
 {
     SDL_Event e;
@@ -769,15 +842,28 @@ void eventDispatcher()
                 quit(0);
                 break;
             case SDL_MOUSEMOTION:
+                mouseMotionCB(e.motion.x,e.motion.y);
                 if (debug)
                     printf("Mouse moved by %d,%d to (%d,%d)\n",
                            e.motion.xrel, e.motion.yrel, e.motion.x, e.motion.y);
+                postRedisplay();
                 break;
             case SDL_MOUSEBUTTONDOWN:
+                mouseCB(e.button.button,SDL_MOUSEBUTTONDOWN,e.button.x, e.button.y);
                 if (debug)
                     printf("Mouse button %d pressed at (%d,%d)\n",
                            e.button.button, e.button.x, e.button.y);
+                postRedisplay();
                 break;
+            case SDL_MOUSEBUTTONUP:
+                mouseCB(e.button.button,SDL_MOUSEBUTTONUP,e.button.x, e.button.y);
+                if (debug)
+                    printf("Mouse button %d pressed at (%d,%d)\n",
+                           e.button.button, e.button.x, e.button.y);
+                postRedisplay();
+                break;
+
+
             case SDL_KEYDOWN:
                 keyDown(&e.key);
                 break;
@@ -862,10 +948,10 @@ void mainLoop()
 {
     while (1) {
         eventDispatcher();
-//        if (wantRedisplay) {
-            display();
-            wantRedisplay = 0;
-//        }
+        if (wantRedisplay) {
+        display();
+        wantRedisplay = 0;
+        }
         update();
     }
 }
@@ -905,7 +991,7 @@ int initGraphics()
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-//    glewInit();
+    glewInit();
 
     int w, h;
     SDL_GetWindowSize(window, &w, &h);
@@ -942,7 +1028,7 @@ int main(int argc, char** argv)
 
     // OpenGL initialisation, must be done before any OpenGL calls
     init();
-
+    initSharedMem();
     atexit(sys_shutdown);
 
     mainLoop();
