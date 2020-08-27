@@ -10,6 +10,7 @@
  * Originally based on the Redbook robot arm example.
  */
 #define GLEW_STATIC
+
 #include <GL/glew.h>
 #include <GL/gl.h>
 #include <GL/glu.h>
@@ -49,14 +50,8 @@ typedef struct {
 global_t g = {0, 0, 0, 0, 0, 0, true, 0, 0, 0.2, 0, false};
 
 typedef struct {
-    float x;
-    float y;
-    float z;
-} Camera;
-
-Camera camera = {0,0,0};
-
-typedef struct { float x, y; } vec2f;
+    float x, y;
+} vec2f;
 
 // Globals
 bool debug = true;
@@ -73,7 +68,7 @@ typedef struct {
 
 sinewave sws[] =
         {
-                {0.25, 2 * M_PI / 1,   0.25 * M_PI},
+                {0.25, 2 * M_PI / 1, 0.25 * M_PI},
                 {0.25, 1 * M_PI / 1, 0.5 * M_PI}
         };
 
@@ -98,25 +93,37 @@ enum DerefMethods {
 
 #define BUFFER_OFFSET(i) ((void*)(i))
 
-typedef struct { float x, y, z; } vec3f;
-typedef struct { vec3f r, n; } Vertex;
+typedef struct {
+    float x, y, z;
+} vec3f;
+typedef struct {
+    vec3f r, n;
+} Vertex;
 
 Vertex *vertices;
 unsigned *indices;
 unsigned n_vertices, n_indices;
 unsigned vbo, ibo;
-unsigned rows = 250, cols = 250;
+unsigned rows = 50, cols = 50;
 
-enum { IM = 0, SA, SAI, VA, VBO, nM } mode = VBO;
+enum {
+    IM = 0, SA, SAI, VA, VBO, nM
+} mode = VBO;
 
 
 // GLUT CALLBACK functions
 void displayCB();
+
 void reshapeCB(int w, int h);
+
 void timerCB(int millisec);
+
 void idleCB();
+
 void keyboardCB(unsigned char key, int x, int y);
+
 void mouseCB(int button, int stat, int x, int y);
+
 void mouseMotionCB(int x, int y);
 
 // CALLBACK function when exit() called ///////////////////////////////////////
@@ -124,29 +131,43 @@ void exitCB();
 
 
 void initGL();
-int  initGLUT(int argc, char **argv);
+
+int initGLUT(int argc, char **argv);
+
 bool initSharedMem();
+
 void clearSharedMem();
+
 void initLights();
+
 void setCamera(float posX, float posY, float posZ, float targetX, float targetY, float targetZ);
-GLuint createVBO(const void* data, int dataSize, GLenum target=GL_ARRAY_BUFFER_ARB, GLenum usage=GL_STATIC_DRAW_ARB);
+
+GLuint
+createVBO(const void *data, int dataSize, GLenum target = GL_ARRAY_BUFFER_ARB, GLenum usage = GL_STATIC_DRAW_ARB);
+
 void deleteVBO(const GLuint vboId);
+
 void drawString(const char *str, int x, int y, float color[4], void *font);
+
 void drawString3D(const char *str, float pos[3], float color[4], void *font);
+
 void showInfo();
-void updateVertices(float* vertices, float* srcVertices, float* srcNormals, int count, float time);
+
+void updateVertices(float *vertices, float *srcVertices, float *srcNormals, int count, float time);
+
 void showFPS();
+
 void toOrtho();
+
 void toPerspective();
 
 
-
 // constants
-const int   SCREEN_WIDTH    = 800;
-const int   SCREEN_HEIGHT   = 600;
+const int SCREEN_WIDTH = 800;
+const int SCREEN_HEIGHT = 600;
 const float CAMERA_DISTANCE = 7.0f;
-const int   TEXT_WIDTH      = 8;
-const int   TEXT_HEIGHT     = 13;
+const int TEXT_WIDTH = 8;
+const int TEXT_HEIGHT = 13;
 
 
 // global variables
@@ -165,8 +186,8 @@ bool vboSupported, vboUsed;
 int drawMode = 0;
 Timer timer, t1, t2;
 float drawTime, updateTime;
-float* srcVertices;                 // pointer to copy of vertex array
-int    vertexCount;                 // number of vertices
+float *srcVertices;                 // pointer to copy of vertex array
+int vertexCount;                 // number of vertices
 
 
 
@@ -174,8 +195,7 @@ int    vertexCount;                 // number of vertices
 // write 2d text using GLUT
 // The projection matrix must be set to orthogonal before call this function.
 ///////////////////////////////////////////////////////////////////////////////
-void drawString(const char *str, int x, int y, float color[4], void *font)
-{
+void drawString(const char *str, int x, int y, float color[4], void *font) {
     glPushAttrib(GL_LIGHTING_BIT | GL_CURRENT_BIT); // lighting and color mask
     glDisable(GL_LIGHTING);     // need to disable lighting for proper text color
     glDisable(GL_TEXTURE_2D);
@@ -184,8 +204,7 @@ void drawString(const char *str, int x, int y, float color[4], void *font)
     glRasterPos2i(x, y);        // place text position
 
     // loop all characters in the string
-    while(*str)
-    {
+    while (*str) {
         glutBitmapCharacter(font, *str);
         ++str;
     }
@@ -196,12 +215,10 @@ void drawString(const char *str, int x, int y, float color[4], void *font)
 }
 
 
-
 ///////////////////////////////////////////////////////////////////////////////
 // display info messages
 ///////////////////////////////////////////////////////////////////////////////
-void showInfo()
-{
+void showInfo() {
     // backup current model-view matrix
     glPushMatrix();                 // save current modelview matrix
     glLoadIdentity();               // reset modelview matrix
@@ -216,16 +233,16 @@ void showInfo()
 
     std::stringstream ss;
     ss << "VBO: " << (vboUsed ? "on" : "off") << std::ends;  // add 0(ends) at the end
-    drawString(ss.str().c_str(), 1, screenHeight-TEXT_HEIGHT, color, font);
+    drawString(ss.str().c_str(), 1, screenHeight - TEXT_HEIGHT, color, font);
     ss.str(""); // clear buffer
 
     ss << std::fixed << std::setprecision(3);
     ss << "Updating Time: " << updateTime << " ms" << std::ends;
-    drawString(ss.str().c_str(), 1, screenHeight-(2*TEXT_HEIGHT), color, font);
+    drawString(ss.str().c_str(), 1, screenHeight - (2 * TEXT_HEIGHT), color, font);
     ss.str("");
 
     ss << "Drawing Time: " << drawTime << " ms" << std::ends;
-    drawString(ss.str().c_str(), 1, screenHeight-(3*TEXT_HEIGHT), color, font);
+    drawString(ss.str().c_str(), 1, screenHeight - (3 * TEXT_HEIGHT), color, font);
     ss.str("");
 
     ss << "Press SPACE key to toggle VBO on/off." << std::ends;
@@ -243,12 +260,10 @@ void showInfo()
 }
 
 
-
 ///////////////////////////////////////////////////////////////////////////////
 // display frame rates
 ///////////////////////////////////////////////////////////////////////////////
-void showFPS()
-{
+void showFPS() {
     static Timer timer;
     static int count = 0;
     static std::string fps = "0.0 FPS";
@@ -257,8 +272,7 @@ void showFPS()
     // update fps every second
     ++count;
     elapsedTime = timer.getElapsedTime();
-    if(elapsedTime > 1.0)
-    {
+    if (elapsedTime > 1.0) {
         std::stringstream ss;
         ss << std::fixed << std::setprecision(1);
         ss << (count / elapsedTime) << " FPS" << std::ends; // update fps string
@@ -279,8 +293,8 @@ void showFPS()
     gluOrtho2D(0, screenWidth, 0, screenHeight); // set to orthogonal projection
 
     float color[4] = {1, 1, 0, 1};
-    int textWidth = (int)fps.size() * TEXT_WIDTH;
-    drawString(fps.c_str(), screenWidth-textWidth, screenHeight-TEXT_HEIGHT, color, font);
+    int textWidth = (int) fps.size() * TEXT_WIDTH;
+    drawString(fps.c_str(), screenWidth - textWidth, screenHeight - TEXT_HEIGHT, color, font);
 
     // restore projection matrix
     glPopMatrix();                      // restore to previous projection matrix
@@ -291,30 +305,25 @@ void showFPS()
 }
 
 
-void enableVAs()
-{
+void enableVAs() {
     glEnableClientState(GL_VERTEX_ARRAY);
 }
 
-void disableVAs()
-{
+void disableVAs() {
     glDisableClientState(GL_VERTEX_ARRAY);
 }
 
-void bindVBOs()
-{
+void bindVBOs() {
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
 }
 
-void unbindVBOs()
-{
+void unbindVBOs() {
     glBindBuffer(0, vbo);
     glBindBuffer(0, ibo);
 }
 
-void buildVBOs()
-{
+void buildVBOs() {
     glGenBuffers(1, &vbo); //buffer for vertex
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, n_vertices * sizeof(Vertex), vertices, GL_DYNAMIC_DRAW);
@@ -324,14 +333,12 @@ void buildVBOs()
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_indices * sizeof(unsigned int), indices, GL_DYNAMIC_DRAW);
 }
 
-void enableVBOs()
-{
+void enableVBOs() {
     glEnableClientState(GL_VERTEX_ARRAY);
 
 }
 
-void disableVBOs()
-{
+void disableVBOs() {
     glDisableClientState(GL_VERTEX_ARRAY);
 
 }
@@ -347,8 +354,7 @@ void calcSineWave3D(sinewave wave, float x, float z, float t, float *y, bool der
     }
 }
 
-void drawGrid2D(int rows, int cols)
-{
+void drawGrid2D(int rows, int cols) {
     glPushAttrib(GL_CURRENT_BIT);
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glColor3f(1.0, 1.0, 1.0);
@@ -375,15 +381,14 @@ float rand01() {
 
 }
 
-void computeAndStoreGrid2D(int rows, int cols)
-{
+void computeAndStoreGrid2D(int rows, int cols) {
     n_vertices = (rows + 1) * (cols + 1);
     n_indices = (rows + 1) * (cols - 1) * 2 + (rows + 1) * 2;
     // or more simply: n_indices = n_vertices * 2;
     free(vertices);
-    vertices = (Vertex *)malloc(n_vertices * sizeof(Vertex));
+    vertices = (Vertex *) malloc(n_vertices * sizeof(Vertex));
     free(indices);
-    indices = (unsigned *)malloc(n_indices * sizeof(unsigned));
+    indices = (unsigned *) malloc(n_indices * sizeof(unsigned));
 
 
     /* Grid */
@@ -398,8 +403,8 @@ void computeAndStoreGrid2D(int rows, int cols)
             float z = -1.0 + j * dy;
             float y;
             float dxdy;
-            calcSineWave3D(sws[0],x,z,g.t,&y, false,&dxdy);
-            vtx->r = (vec3f) { x,y, z};
+            calcSineWave3D(sws[0], x, z, g.t, &y, false, &dxdy);
+            vtx->r = (vec3f) {x, y, z};
             vtx++;
         }
     }
@@ -418,7 +423,7 @@ void computeAndStoreGrid2D(int rows, int cols)
     for (int i = 0; i <= cols; i++) {
         for (int j = 0; j <= rows; j++) {
             int idx = i * (rows + 1) + j;
-            printf("(%5.2f,%5.2f, %5.2f)", vertices[idx].r.x,vertices[idx].r.y, vertices[idx].r.z);
+            printf("(%5.2f,%5.2f, %5.2f)", vertices[idx].r.x, vertices[idx].r.y, vertices[idx].r.z);
         }
         printf("\n");
     }
@@ -429,9 +434,10 @@ void computeAndStoreGrid2D(int rows, int cols)
 #endif
 
 }
+
 #define DEBUG_DRAW_GRID_ARRAY
-void drawGrid2DStoredVertices(int rows, int cols)
-{
+
+void drawGrid2DStoredVertices(int rows, int cols) {
     glPushAttrib(GL_CURRENT_BIT);
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glColor3f(1.0, 1.0, 1.0);
@@ -457,14 +463,13 @@ void drawGrid2DStoredVertices(int rows, int cols)
     glPopAttrib();
 }
 
-void drawGrid2DStoredVerticesAndIndices(int rows, int cols)
-{
+void drawGrid2DStoredVerticesAndIndices(int rows, int cols) {
     glPushAttrib(GL_CURRENT_BIT);
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glColor3f(1.0, 1.0, 1.0);
 
     /* Grid */
-    unsigned  *idx = indices;
+    unsigned *idx = indices;
     for (int i = 0; i < cols; i++) {
         glBegin(GL_TRIANGLE_STRIP);
         for (int j = 0; j <= rows; j++) {
@@ -484,15 +489,14 @@ void drawGrid2DStoredVerticesAndIndices(int rows, int cols)
     glPopAttrib();
 }
 
-void drawGrid2DVAs(int rows, int cols)
-{
+void drawGrid2DVAs(int rows, int cols) {
     glPushAttrib(GL_CURRENT_BIT);
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glColor3f(1.0, 1.0, 1.0);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    glVertexPointer(3, GL_FLOAT,sizeof(Vertex), &vertices[0].r);
+    glVertexPointer(3, GL_FLOAT, sizeof(Vertex), &vertices[0].r);
 
     for (int i = 0; i < cols; i++)
         glDrawElements(GL_TRIANGLE_STRIP, (rows + 1) * 2, GL_UNSIGNED_INT, &indices[i * (rows + 1) * 2]);
@@ -500,24 +504,23 @@ void drawGrid2DVAs(int rows, int cols)
     glPopAttrib();
 }
 
-void drawGrid2DVBOs(int rows, int cols)
-{
+void drawGrid2DVBOs(int rows, int cols) {
     glPushAttrib(GL_CURRENT_BIT);
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glColor3f(1.0, 1.0, 1.0);
 
     bindVBOs();
-    glVertexPointer(3, GL_FLOAT,sizeof(Vertex), BUFFER_OFFSET(0));
+    glVertexPointer(3, GL_FLOAT, sizeof(Vertex), BUFFER_OFFSET(0));
     /* Grid */
     for (int i = 0; i < cols; i++) {
-        glDrawElements(GL_TRIANGLE_STRIP, (rows + 1) * 2, GL_UNSIGNED_INT, BUFFER_OFFSET(i * (rows + 1) * 2 * sizeof(unsigned int)));
+        glDrawElements(GL_TRIANGLE_STRIP, (rows + 1) * 2, GL_UNSIGNED_INT,
+                       BUFFER_OFFSET(i * (rows + 1) * 2 * sizeof(unsigned int)));
     }
     unbindVBOs();
     glPopAttrib();
 }
 
-void UpdateVertices()
-{
+void UpdateVertices() {
 
 //    // bind then map the VBO
 //    glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -538,8 +541,7 @@ void UpdateVertices()
 }
 
 
-void checkForGLerrors(int lineno)
-{
+void checkForGLerrors(int lineno) {
     GLenum error;
     while ((error = glGetError()) != GL_NO_ERROR)
         printf("%d: %s\n", lineno, gluErrorString(error));
@@ -547,8 +549,7 @@ void checkForGLerrors(int lineno)
 
 
 /* Immediate mode, vertex at a time */
-void renderCubeIM()
-{
+void renderCubeIM() {
 //    int i, j;
 //
 //    glBegin(GL_QUADS);
@@ -561,8 +562,7 @@ void renderCubeIM()
 }
 
 /* Use VAs or VBOs */
-void renderCubeVAVBO()
-{
+void renderCubeVAVBO() {
 //    int i, j;
 //
 //    /* Bind/unbind buffers and set vertex and color array pointers */
@@ -657,13 +657,12 @@ void renderCubeVAVBO()
  * done.
  */
 int wantRedisplay = 1;
-void postRedisplay()
-{
+
+void postRedisplay() {
     wantRedisplay = 1;
 }
 
-void quit(int code)
-{
+void quit(int code) {
     SDL_DestroyWindow(window);
     SDL_Quit();
     exit(code);
@@ -672,8 +671,7 @@ void quit(int code)
 ///////////////////////////////////////////////////////////////////////////////
 // initialize lights
 ///////////////////////////////////////////////////////////////////////////////
-void initLights()
-{
+void initLights() {
     // set up light colors (ambient, diffuse, specular)
     GLfloat lightKa[] = {.2f, .2f, .2f, 1.0f};  // ambient light
     GLfloat lightKd[] = {.7f, .7f, .7f, 1.0f};  // diffuse light
@@ -691,9 +689,8 @@ void initLights()
 
 
 // OpenGL initialisation
-void init(void)
-{
-    glShadeModel (GL_FLAT);
+void init(void) {
+    glShadeModel(GL_FLAT);
     glColor3f(1.0, 1.0, 1.0);
     computeAndStoreGrid2D(rows, cols);
     buildVBOs();
@@ -701,8 +698,7 @@ void init(void)
 
 
 // Draws a wireframe box
-void myWireBox(float l, float h)
-{
+void myWireBox(float l, float h) {
     glPushMatrix();
     glScalef(0.5, 0.5, 0.5);
     glScalef(l, h, 1.0);
@@ -717,11 +713,10 @@ void myWireBox(float l, float h)
 
 
 // Draws a wireframe diamond - a rotated box
-void myWireDiamond(float l, float h)
-{
+void myWireDiamond(float l, float h) {
     glPushMatrix();
     glScalef(l, h, 1.0);
-    glScalef(1.0/sqrt(2.0), 1.0/sqrt(2.0), 1.0);
+    glScalef(1.0 / sqrt(2.0), 1.0 / sqrt(2.0), 1.0);
     glRotatef(45.0, 0.0, 0.0, 1.0);
     myWireBox(1.0, 1.0);
     glPopMatrix();
@@ -741,13 +736,11 @@ void DrawAxes(float len) {
     glEnd();
 }
 
-void display(void)
-{
+void display(void) {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_BLEND);
-
 
 
     glColor3f(1.0, 1.0, 1.0);
@@ -760,8 +753,7 @@ void display(void)
     glRotatef(cameraAngleX, 1, 0, 0);   // pitch
     glRotatef(cameraAngleY, 0, 1, 0);   // heading
 
-    // transform teapot
-    glTranslatef(0, -1.57f, 0);
+//    glTranslatef(0, -1.57f, 0);
 
     t1.start();
 
@@ -801,7 +793,7 @@ void display(void)
     glPopMatrix();
 
     t1.stop(); //===============================================================
-    drawTime = (float)t1.getElapsedTimeInMilliSec() - updateTime;
+    drawTime = (float) t1.getElapsedTimeInMilliSec() - updateTime;
 
     showFPS();
     showInfo();
@@ -810,17 +802,14 @@ void display(void)
     // Check for OpenGL errors at least once per frame
     int err;
     while ((err = glGetError()) != GL_NO_ERROR) {
-        printf("display: %s\n",gluErrorString(err));
+        printf("display: %s\n", gluErrorString(err));
     }
 }
-
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // initialize global variables
 ///////////////////////////////////////////////////////////////////////////////
-bool initSharedMem()
-{
+bool initSharedMem() {
     screenWidth = SCREEN_WIDTH;
     screenHeight = SCREEN_HEIGHT;
 
@@ -839,31 +828,28 @@ bool initSharedMem()
 ///////////////////////////////////////////////////////////////////////////////
 // set the projection matrix as perspective
 ///////////////////////////////////////////////////////////////////////////////
-void toPerspective()
-{
+void toPerspective() {
     // set viewport to be the entire window
-    glViewport(0, 0, (GLsizei)screenWidth, (GLsizei)screenHeight);
+    glViewport(0, 0, (GLsizei) screenWidth, (GLsizei) screenHeight);
 
     // set perspective viewing frustum
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(45.0f, (float)(screenWidth)/screenHeight, 1.0f, 1000.0f); // FOV, AspectRatio, NearClip, FarClip
+    gluPerspective(45.0f, (float) (screenWidth) / screenHeight, 1.0f, 1000.0f); // FOV, AspectRatio, NearClip, FarClip
 
     // switch to modelview matrix in order to set scene
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 }
 
-void reshape(int w, int h)
-{
+void reshape(int w, int h) {
     screenWidth = w;
     screenHeight = h;
     toPerspective();
 }
 
 // Key down events
-void keyDown(SDL_KeyboardEvent *e)
-{
+void keyDown(SDL_KeyboardEvent *e) {
     switch (e->keysym.sym) {
         case SDLK_ESCAPE:
             quit(0);
@@ -873,19 +859,15 @@ void keyDown(SDL_KeyboardEvent *e)
             break;
 
         case SDLK_w:
-            camera.x++;
             break;
 
         case SDLK_s:
-            camera.x--;
             break;
 
         case SDLK_a:
-            camera.z++;
             break;
 
         case SDLK_d:
-            camera.z--;
             break;
 
         case SDLK_m:
@@ -910,57 +892,43 @@ void keyDown(SDL_KeyboardEvent *e)
 }
 
 // Key up events
-void keyUp(SDL_KeyboardEvent *e)
-{
+void keyUp(SDL_KeyboardEvent *e) {
 
 }
 
 
-void mouseCB(int button, int state, int x, int y)
-{
+void mouseCB(int button, int state, int x, int y) {
     mouseX = x;
     mouseY = y;
 
-    if(button == 1)
-    {
-        if(state == SDL_MOUSEBUTTONDOWN)
-        {
+    if (button == 1) {
+        if (state == SDL_MOUSEBUTTONDOWN) {
             mouseLeftDown = true;
-        }
-        else if(state == SDL_MOUSEBUTTONUP)
+        } else if (state == SDL_MOUSEBUTTONUP)
             mouseLeftDown = false;
-    }
-
-    else if(button == 3)
-    {
-        if(state == SDL_MOUSEBUTTONDOWN)
-        {
+    } else if (button == 3) {
+        if (state == SDL_MOUSEBUTTONDOWN) {
             mouseRightDown = true;
-        }
-        else if(state == SDL_MOUSEBUTTONUP)
+        } else if (state == SDL_MOUSEBUTTONUP)
             mouseRightDown = false;
     }
 }
 
 
-void mouseMotionCB(int x, int y)
-{
-    if(mouseLeftDown)
-    {
+void mouseMotionCB(int x, int y) {
+    if (mouseLeftDown) {
         cameraAngleY += (x - mouseX);
         cameraAngleX += (y - mouseY);
         mouseX = x;
         mouseY = y;
     }
-    if(mouseRightDown)
-    {
+    if (mouseRightDown) {
         cameraDistance -= (y - mouseY) * 0.2f;
         mouseY = y;
     }
 }
 
-void eventDispatcher()
-{
+void eventDispatcher() {
     SDL_Event e;
 
     // Handle events
@@ -972,21 +940,21 @@ void eventDispatcher()
                 quit(0);
                 break;
             case SDL_MOUSEMOTION:
-                mouseMotionCB(e.motion.x,e.motion.y);
+                mouseMotionCB(e.motion.x, e.motion.y);
                 if (debug)
                     printf("Mouse moved by %d,%d to (%d,%d)\n",
                            e.motion.xrel, e.motion.yrel, e.motion.x, e.motion.y);
                 postRedisplay();
                 break;
             case SDL_MOUSEBUTTONDOWN:
-                mouseCB(e.button.button,SDL_MOUSEBUTTONDOWN,e.button.x, e.button.y);
+                mouseCB(e.button.button, SDL_MOUSEBUTTONDOWN, e.button.x, e.button.y);
                 if (debug)
                     printf("Mouse button %d pressed at (%d,%d)\n",
                            e.button.button, e.button.x, e.button.y);
                 postRedisplay();
                 break;
             case SDL_MOUSEBUTTONUP:
-                mouseCB(e.button.button,SDL_MOUSEBUTTONUP,e.button.x, e.button.y);
+                mouseCB(e.button.button, SDL_MOUSEBUTTONUP, e.button.x, e.button.y);
                 if (debug)
                     printf("Mouse button %d pressed at (%d,%d)\n",
                            e.button.button, e.button.x, e.button.y);
@@ -1000,8 +968,7 @@ void eventDispatcher()
             case SDL_WINDOWEVENT:
                 if (debug)
                     printf("Window event %d\n", e.window.event);
-                switch (e.window.event)
-                {
+                switch (e.window.event) {
                     case SDL_WINDOWEVENT_SHOWN:
                         if (debug)
                             SDL_Log("Window %d shown", e.window.windowID);
@@ -1035,9 +1002,9 @@ void eventDispatcher()
 
 static float tLast = 0.0;
 static float frameCountElapse = 0.0;
+
 // Used to update application state e.g. compute physics, game AI
-void update()
-{
+void update() {
     float t, dt;
 
     t = SDL_GetTicks() / (float) milli;
@@ -1074,13 +1041,12 @@ void update()
  *
  * This is essentially what GLUT's main loop does.
  */
-void mainLoop()
-{
-    while (1) {
+void mainLoop() {
+    while (true) {
         eventDispatcher();
         if (1) {
-        display();
-        wantRedisplay = 0;
+            display();
+            wantRedisplay = 0;
         }
         update();
     }
@@ -1093,8 +1059,7 @@ void mainLoop()
  *
  * Do not put any OpenGL calls before this function is called!
  */
-int initGraphics()
-{
+int initGraphics() {
     SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
@@ -1102,7 +1067,7 @@ int initGraphics()
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
     window =
-            SDL_CreateWindow("Robot Arm Using SDL2",
+            SDL_CreateWindow("Sinwave VBO",
                              SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                              640, 480, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     if (!window) {
@@ -1135,15 +1100,13 @@ int initGraphics()
  * "atexit()" in main(). This is a good place to do your program
  * shutdown and free memory, etc.
  */
-void sys_shutdown()
-{
+void sys_shutdown() {
     SDL_Quit();
 }
 
 
-int main(int argc, char** argv)
-{
-    glutInit(&argc,argv);
+int main(int argc, char **argv) {
+    glutInit(&argc, argv);
 
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         fprintf(stderr, "%s:%d: unable to init SDL: %s\n",
@@ -1161,6 +1124,8 @@ int main(int argc, char** argv)
     init();
     initSharedMem();
     atexit(sys_shutdown);
+
+    timer.start();
 
     mainLoop();
 
