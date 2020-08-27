@@ -1,114 +1,31 @@
-/*
- * robot arm using SDL2
- *
- * This program shows how to composite modeling transformations
- * to draw translated and rotated hierarchical models.
- * Interaction:  pressing the s and e keys (shoulder and elbow)
- * alters the rotation of the robot arm shoulder and elbow.
- * Also left and right plates of the gripper.
- *
- * Originally based on the Redbook robot arm example.
- */
-//#define GLEW_STATIC
-//#include <GL/glew.h>
+///////////////////////////////////////////////////////////////////////////////
+// main.cpp
+// ========
+// testing buffer object for vertex, GL_ARB_vertex_buffer_object extension
+//
+//  AUTHOR: Song Ho Ahn (song.ahn@gmail.com)
+// CREATED: 2005-10-04
+// UPDATED: 2018-08-15
+///////////////////////////////////////////////////////////////////////////////
+
+// in order to get function prototypes from glext.h, define GL_GLEXT_PROTOTYPES before including glext.h
 #define GL_GLEXT_PROTOTYPES
-#include <GL/gl.h>
-#include <GL/glu.h>
+
+#ifdef __APPLE__
+#include <GLUT/glut.h>
+#else
 #include <GL/glut.h>
-#include <SDL2/SDL.h>
-#include <stdbool.h>
-#include "glExtension.h"
-#include <stdlib.h>
-#include <math.h>
-#include <cstdio>
+#endif
+
 #include <iostream>
 #include <sstream>
 #include <iomanip>
 #include <cstdlib>
+#include "glExtension.h"                        // OpenGL extension helper
+#include "teapot.h"                             // meshes of teapot
 #include "Timer.h"
+#include "WaveFunc.h"
 
-/// Global controller.
-typedef struct {
-    float t;
-    float dt;
-    float tLast;
-    float startTime;
-    float waterT;
-    float go;
-
-    bool OSD;
-    int frames;
-    float frameRate;
-    float frameRateInterval;
-    float lastFrameRateT;
-
-    bool gameOver;
-
-    float mapArea;
-} global_t;
-
-global_t g = {0, 0, 0, 0, 0, 0, true, 0, 0, 0.2, 0, false};
-
-typedef struct {
-    float x;
-    float y;
-    float z;
-} Camera;
-
-Camera camera = {0,0,0};
-
-typedef struct { float x, y; } vec2f;
-
-// Globals
-bool debug = true;
-float shoulder, elbow, wrist, left_plate, right_plate;
-SDL_Window *window;
-const float gripper_increment = .2;
-const int milli = 1000;
-
-typedef struct {
-    float A;
-    float k;
-    float w;
-} sinewave;
-
-sinewave sws[] =
-        {
-                {0.25, 2 * M_PI / 1,   0.25 * M_PI},
-                {0.25, 1 * M_PI / 1, 0.5 * M_PI}
-        };
-
-int nsw = 2;
-
-enum RenderMode {
-    IMMEDIATE_MODE = 0,
-    VERTEX_ARRAY,
-    VERTEX_BUFFER_OBJECT,
-    NUMRENMODES
-} renMode = VERTEX_ARRAY;
-
-enum DerefMethods {
-    DRAWARRAYS = 0,
-    MULTIDRAWARRAYS,
-    ARRAYELEMENT,
-    DRAWELEMENTS,
-    DRAWELEMENTSALL,
-    MULTIDRAWELEMENTS,
-    NUMDEREFMETHODS
-} derefMethod = MULTIDRAWELEMENTS;
-
-#define BUFFER_OFFSET(i) ((void*)(i))
-
-typedef struct { float x, y, z; } vec3f;
-typedef struct { vec3f r, n; } Vertex;
-
-Vertex *vertices;
-unsigned *indices;
-unsigned n_vertices, n_indices;
-unsigned vbo, ibo;
-unsigned rows = 50, cols = 50;
-
-enum { IM = 0, SA, SAI, VA, VBO, nM } mode = VBO;
 
 
 // GLUT CALLBACK functions
@@ -141,7 +58,6 @@ void toOrtho();
 void toPerspective();
 
 
-
 // constants
 const int   SCREEN_WIDTH    = 800;
 const int   SCREEN_HEIGHT   = 600;
@@ -169,383 +85,253 @@ float drawTime, updateTime;
 float* srcVertices;                 // pointer to copy of vertex array
 int    vertexCount;                 // number of vertices
 
-void enableVAs()
+
+
+///////////////////////////////////////////////////////////////////////////////
+int main(int argc, char **argv)
 {
-    glEnableClientState(GL_VERTEX_ARRAY);
-}
+    // init global vars
+    initSharedMem();
 
-void disableVAs()
-{
-    glDisableClientState(GL_VERTEX_ARRAY);
-}
+    // init GLUT and GL
+    initGLUT(argc, argv);
+    initGL();
 
-void bindVBOs()
-{
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-}
+    // register exit callback
+    atexit(exitCB);
 
-void unbindVBOs()
-{
-    glBindBuffer(0, vbo);
-    glBindBuffer(0, ibo);
-}
+    // get OpenGL extensions
+    glExtension& ext = glExtension::getInstance();
+    vboSupported = vboUsed = ext.isSupported("GL_ARB_vertex_buffer_object");
+    if(vboSupported)
+    {
+        std::cout << "Video card supports GL_ARB_vertex_buffer_object." << std::endl;
 
-void buildVBOs()
-{
-    glGenBuffers(1, &vbo); //buffer for vertex
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, n_vertices * sizeof(Vertex), vertices, GL_DYNAMIC_DRAW);
+        std::size_t vertexSize = sizeof(teapotVertices);
+        std::size_t normalSize = sizeof(teapotNormals);
+        std::size_t indexSize = sizeof(teapotIndices);
 
-    glGenBuffers(1, &ibo); //buffer for indice
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_indices * sizeof(unsigned int), indices, GL_DYNAMIC_DRAW);
-}
+        // create vertex buffer objects, you need to delete them when program exits
+        // Try to put both vertex coords array and vertex normal array in the same buffer object.
+        // glBufferData with NULL pointer reserves only memory space.
+        // Copy actual data with 2 calls of glBufferSubData, one for vertex coords and one for normals.
+        // target flag is GL_ARRAY_BUFFER, and usage flag is GL_STREAM_DRAW because we will update vertices every frame.
+        glGenBuffers(1, &vboId1);
+        glBindBuffer(GL_ARRAY_BUFFER, vboId1);
+        glBufferData(GL_ARRAY_BUFFER, vertexSize+normalSize, 0, GL_STREAM_DRAW);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, vertexSize, teapotVertices);
+        glBufferSubData(GL_ARRAY_BUFFER, vertexSize, normalSize, teapotNormals);
 
-void enableVBOs()
-{
-    glEnableClientState(GL_VERTEX_ARRAY);
+        // create VBO for index array
+        // Target of this VBO is GL_ELEMENT_ARRAY_BUFFER and usage is GL_STATIC_DRAW
+        vboId2 = createVBO(teapotIndices, indexSize, GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW);
 
-}
-
-void disableVBOs()
-{
-    glDisableClientState(GL_VERTEX_ARRAY);
-
-}
-
-
-void calcSineWave3D(sinewave wave, float x, float z, float t, float *y, bool der, float *dydx) {
-    float angle = wave.k * x * x + wave.k * z * z + wave.w * t;
-//    float angle = wave.k * z * z  + wave.w * t;
-
-    *y = wave.A * sinf(angle);
-    if (der) {
-        *dydx = wave.k * wave.A * cosf(angle);
+        // print vertex array size in bytes
+        int bufferSize;
+        std::cout << "Vertex Array: " << vertexSize << " bytes\n";
+        std::cout << "Normal Array: " << normalSize << " bytes\n";
+        std::cout << " Index Array: " << indexSize << " bytes\n";
+        glGetBufferParameteriv(GL_ARRAY_BUFFER, GL_BUFFER_SIZE, &bufferSize);
+        std::cout << "Vertex and Normal Array in VBO: " << bufferSize << " bytes\n";
+        glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &bufferSize);
+        std::cout << "Index Array in VBO: " << bufferSize << " bytes\n";
+        std::cout << std::endl;
     }
-}
-
-void drawGrid2D(int rows, int cols)
-{
-    glPushAttrib(GL_CURRENT_BIT);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    glColor3f(1.0, 1.0, 1.0);
-
-    /* Grid */
-    float dy = 2.0f / (float) rows;
-    float dx = 2.0f / (float) cols;
-    for (int i = 0; i < cols; i++) {
-        float x = -1.0 + i * dx;
-        glBegin(GL_TRIANGLE_STRIP);
-        for (int j = 0; j <= rows; j++) {
-            float y = -1.0 + j * dy;
-            glVertex3f(x, y, 0.0);
-            glVertex3f(x + dx, y, 0.0);
-        }
-        glEnd();
+    else
+    {
+        std::cout << "Video card does NOT support GL_ARB_vertex_buffer_object." << std::endl;
     }
 
-    glPopAttrib();
-}
-
-float rand01() {
-    return rand() / (float) RAND_MAX;
-
-}
-
-void computeAndStoreGrid2D(int rows, int cols)
-{
-    n_vertices = (rows + 1) * (cols + 1);
-    n_indices = (rows + 1) * (cols - 1) * 2 + (rows + 1) * 2;
-    // or more simply: n_indices = n_vertices * 2;
-    free(vertices);
-    vertices = (Vertex *)malloc(n_vertices * sizeof(Vertex));
-    free(indices);
-    indices = (unsigned *)malloc(n_indices * sizeof(unsigned));
-
-
-    /* Grid */
-
-    /* Vertices */
-    float dy = 20 / (float) rows;
-    float dx = 20 / (float) cols;
-    Vertex *vtx = vertices;
-    for (int i = 0; i <= cols; i++) {
-        float x = -1.0 + i * dx;
-        for (int j = 0; j <= rows; j++) {
-            float z = -1.0 + j * dy;
-            float y;
-            float dxdy;
-            calcSineWave3D(sws[0],x,z,g.t,&y, false,&dxdy);
-            vtx->r = (vec3f) { x,y, z};
-            vtx++;
-        }
+    // disable V-Sync
+#ifdef _WIN32
+    if(ext.isSupported("WGL_EXT_swap_control"))
+    {
+        wglSwapIntervalEXT(0);
+        std::cout << "Video card supports WGL_EXT_swap_control.\nDisable V-Sync." << std::endl;
     }
-
-    /* Indices */
-    unsigned *idx = indices;
-    for (int i = 0; i < cols; i++) {
-        for (int j = 0; j <= rows; j++) {
-            *idx++ = i * (rows + 1) + j;
-            *idx++ = (i + 1) * (rows + 1) + j;
-        }
-    }
-
-#define DEBUG_STORE_VERTICES
-#ifdef DEBUG_STORE_VERTICES
-    for (int i = 0; i <= cols; i++) {
-        for (int j = 0; j <= rows; j++) {
-            int idx = i * (rows + 1) + j;
-            printf("(%5.2f,%5.2f, %5.2f)", vertices[idx].r.x,vertices[idx].r.y, vertices[idx].r.z);
-        }
-        printf("\n");
-    }
-    for (int i = 0; i < n_indices; i++) {
-        printf("%d ", indices[i]);
-    }
-    printf("\n");
 #endif
 
-}
-#define DEBUG_DRAW_GRID_ARRAY
-void drawGrid2DStoredVertices(int rows, int cols)
-{
-    glPushAttrib(GL_CURRENT_BIT);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    glColor3f(1.0, 1.0, 1.0);
+    // start timer, the elapsed time will be used for updateVertices()
+    timer.start();
 
-    /* Grid */
-    for (int i = 0; i < cols; i++) {
-        glBegin(GL_TRIANGLE_STRIP);
-        for (int j = 0; j <= rows; j++) {
-            int idx = i * (rows + 1) + j;
-#ifdef DEBUG_DRAW_GRID_ARRAY
-            printf("%d %d %d %f %f\n", i, j, idx, vertices[idx].r.x, vertices[idx].r.y);
-#endif
-            glVertex3fv(&vertices[idx].r.x);
-            idx += rows + 1;
-#ifdef DEBUG_DRAW_GRID_ARRAY
-            printf("%d %d %d %f %f\n", i, j, idx, vertices[idx].r.x, vertices[idx].r.y);
-#endif
-            glVertex3fv(&vertices[idx].r.x);
-        }
-        glEnd();
+    // the last GLUT call (LOOP)
+    // window will be shown and display callback is triggered by events
+    // NOTE: this call never return main().
+    glutMainLoop(); /* Start GLUT event-processing loop */
+
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// initialize GLUT for windowing
+///////////////////////////////////////////////////////////////////////////////
+int initGLUT(int argc, char **argv)
+{
+    // GLUT stuff for windowing
+    // initialization openGL window.
+    // it is called before any other GLUT routine
+    glutInit(&argc, argv);
+
+    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL);   // display mode
+
+    glutInitWindowSize(screenWidth, screenHeight);  // window size
+
+    glutInitWindowPosition(100, 100);               // window location
+
+    // finally, create a window with openGL context
+    // Window will not displayed until glutMainLoop() is called
+    // it returns a unique ID
+    int handle = glutCreateWindow(argv[0]);         // param is the title of window
+
+    // register GLUT callback functions
+    glutDisplayFunc(displayCB);
+    //glutTimerFunc(33, timerCB, 33);                 // redraw only every given millisec
+    glutIdleFunc(idleCB);                           // redraw only every given millisec
+    glutReshapeFunc(reshapeCB);
+    glutKeyboardFunc(keyboardCB);
+    glutMouseFunc(mouseCB);
+    glutMotionFunc(mouseMotionCB);
+
+    return handle;
+}
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// initialize OpenGL
+// disable unused features
+///////////////////////////////////////////////////////////////////////////////
+void initGL()
+{
+    glShadeModel(GL_SMOOTH);                    // shading mathod: GL_SMOOTH or GL_FLAT
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);      // 4-byte pixel alignment
+
+    // enable /disable features
+    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+    //glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+    //glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_LIGHTING);
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_CULL_FACE);
+
+    // track material ambient and diffuse from surface color, call it before glEnable(GL_COLOR_MATERIAL)
+    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+    glEnable(GL_COLOR_MATERIAL);
+
+    glClearColor(0, 0, 0, 0);                   // background color
+    glClearStencil(0);                          // clear stencil buffer
+    glClearDepth(1.0f);                         // 0 is near, 1 is far
+    glDepthFunc(GL_LEQUAL);
+
+    initLights();
+}
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// write 2d text using GLUT
+// The projection matrix must be set to orthogonal before call this function.
+///////////////////////////////////////////////////////////////////////////////
+void drawString(const char *str, int x, int y, float color[4], void *font)
+{
+    glPushAttrib(GL_LIGHTING_BIT | GL_CURRENT_BIT); // lighting and color mask
+    glDisable(GL_LIGHTING);     // need to disable lighting for proper text color
+    glDisable(GL_TEXTURE_2D);
+
+    glColor4fv(color);          // set text color
+    glRasterPos2i(x, y);        // place text position
+
+    // loop all characters in the string
+    while(*str)
+    {
+        glutBitmapCharacter(font, *str);
+        ++str;
     }
 
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_LIGHTING);
     glPopAttrib();
 }
 
-void drawGrid2DStoredVerticesAndIndices(int rows, int cols)
+
+
+///////////////////////////////////////////////////////////////////////////////
+// draw a string in 3D space
+///////////////////////////////////////////////////////////////////////////////
+void drawString3D(const char *str, float pos[3], float color[4], void *font)
 {
-    glPushAttrib(GL_CURRENT_BIT);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    glColor3f(1.0, 1.0, 1.0);
+    glPushAttrib(GL_LIGHTING_BIT | GL_CURRENT_BIT); // lighting and color mask
+    glDisable(GL_LIGHTING);     // need to disable lighting for proper text color
+    glDisable(GL_TEXTURE_2D);
 
-    /* Grid */
-    unsigned  *idx = indices;
-    for (int i = 0; i < cols; i++) {
-        glBegin(GL_TRIANGLE_STRIP);
-        for (int j = 0; j <= rows; j++) {
-            glVertex3fv(&vertices[*idx].r.x);
-            printf("%d %d %d %f %f\n", i, j, *idx, vertices[*idx].r.x, vertices[*idx].r.y);
+    glColor4fv(color);          // set text color
+    glRasterPos3fv(pos);        // place text position
 
-            idx++;
-
-            glVertex3fv(&vertices[*idx].r.x);
-            printf("%d %d %d %f %f\n", i, j, *idx, vertices[*idx].r.x, vertices[*idx].r.y);
-
-            idx++;
-        }
-        glEnd();
+    // loop all characters in the string
+    while(*str)
+    {
+        glutBitmapCharacter(font, *str);
+        ++str;
     }
 
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_LIGHTING);
     glPopAttrib();
 }
 
-void drawGrid2DVAs(int rows, int cols)
+
+
+///////////////////////////////////////////////////////////////////////////////
+// initialize global variables
+///////////////////////////////////////////////////////////////////////////////
+bool initSharedMem()
 {
-    glPushAttrib(GL_CURRENT_BIT);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    glColor3f(1.0, 1.0, 1.0);
+    screenWidth = SCREEN_WIDTH;
+    screenHeight = SCREEN_HEIGHT;
 
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    glVertexPointer(3, GL_FLOAT,sizeof(Vertex), &vertices[0].r);
+    mouseLeftDown = mouseRightDown = false;
+    mouseX = mouseY = 0;
 
-    for (int i = 0; i < cols; i++)
-        glDrawElements(GL_TRIANGLE_STRIP, (rows + 1) * 2, GL_UNSIGNED_INT, &indices[i * (rows + 1) * 2]);
+    cameraAngleX = cameraAngleY = 0.0f;
+    cameraDistance = CAMERA_DISTANCE;
 
-    glPopAttrib();
+    drawMode = 0; // 0:fill, 1: wireframe, 2:points
+    drawTime = updateTime = 0;
+
+    // make a copy of vertex array
+    // It will be used as src data for updateVertices()
+    vertexCount = sizeof(teapotVertices) / (3 * sizeof(float));
+    srcVertices = new float[vertexCount * 3];
+
+    // copy data
+    int count = vertexCount * 3;
+    for(int i=0; i < count; ++i)
+        srcVertices[i] = teapotVertices[i];
+
+    return true;
 }
 
-void drawGrid2DVBOs(int rows, int cols)
-{
-    glPushAttrib(GL_CURRENT_BIT);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    glColor3f(1.0, 1.0, 1.0);
 
-    bindVBOs();
-    glVertexPointer(3, GL_FLOAT,sizeof(Vertex), BUFFER_OFFSET(0));
-    /* Grid */
-    for (int i = 0; i < cols; i++) {
-        glDrawElements(GL_TRIANGLE_STRIP, (rows + 1) * 2, GL_UNSIGNED_INT, BUFFER_OFFSET(i * (rows + 1) * 2 * sizeof(unsigned int)));
+
+///////////////////////////////////////////////////////////////////////////////
+// clean up shared memory
+///////////////////////////////////////////////////////////////////////////////
+void clearSharedMem()
+{
+    // clean up VBOs
+    if(vboSupported)
+    {
+        deleteVBO(vboId1);
+        deleteVBO(vboId2);
+        vboId1 = vboId2 = 0;
     }
-    unbindVBOs();
-    glPopAttrib();
-}
 
-void UpdateVertices()
-{
-
-//    // bind then map the VBO
-//    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-//    float* ptr = (float*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-//
-//// if the pointer is valid (mapping was successful), update VBO
-//    if(ptr) {
-//        updateMyVBO(ptr, ...);    // modify buffer data
-//    glUnmapBuffer(GL_ARRAY_BUFFER); // unmap it after use }
-//// you can draw the updated VBO ...
-//
-//    for(int i = 0; i < n_vertices; i++)
-//    {
-//        Vertex *vertex = &vertices[i];
-//        float dxdy;
-//        calcSineWave3D(sws[0],vertex->r.x,vertex->r.z,g.t,&vertex->r.y,false,&dxdy);
-//    }
+    // delete copy of vertex array
+    delete [] srcVertices;
 }
 
 
-void checkForGLerrors(int lineno)
-{
-    GLenum error;
-    while ((error = glGetError()) != GL_NO_ERROR)
-        printf("%d: %s\n", lineno, gluErrorString(error));
-}
-
-
-/* Immediate mode, vertex at a time */
-void renderCubeIM()
-{
-//    int i, j;
-//
-//    glBegin(GL_QUADS);
-//    for (i = 0; i < numQuads; i++)
-//        for (j = 0; j < 4; j++) {
-//            glColor3fv(&colors[indices1DArray[i*4+j]*3]);
-//            glVertex3fv(&vertices[indices1DArray[i*4+j]*3]);
-//        }
-//    glEnd();
-}
-
-/* Use VAs or VBOs */
-void renderCubeVAVBO()
-{
-//    int i, j;
-//
-//    /* Bind/unbind buffers and set vertex and color array pointers */
-//    switch (derefMethod) {
-//        case DRAWARRAYS:
-//        case MULTIDRAWARRAYS:
-//            if (renMode == VERTEX_ARRAY) {
-//                glBindBuffer(GL_ARRAY_BUFFER, 0);
-//                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-//                glVertexPointer(3, GL_FLOAT, 0, verticesQuads);
-//                glColorPointer(3, GL_FLOAT, 0, colorsQuads);
-//            } else if (renMode == VERTEX_BUFFER_OBJECT) {
-//                glBindBuffer(GL_ARRAY_BUFFER, buffers[VERTICES_QUADS]);
-//                glVertexPointer(3, GL_FLOAT, 0, 0);
-//                glBindBuffer(GL_ARRAY_BUFFER, buffers[COLORS_QUADS]);
-//                glColorPointer(3, GL_FLOAT, 0, 0);
-//            }
-//            break;
-//        case ARRAYELEMENT:
-//        case DRAWELEMENTS:
-//        case DRAWELEMENTSALL:
-//        case MULTIDRAWELEMENTS:
-//            if (renMode == VERTEX_ARRAY) {
-//                glBindBuffer(GL_ARRAY_BUFFER, 0);
-//                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-//                glVertexPointer(3, GL_FLOAT, 0, vertices);
-//                glColorPointer(3, GL_FLOAT, 0, colors);
-//            }  if (renMode == VERTEX_BUFFER_OBJECT) {
-//        glBindBuffer(GL_ARRAY_BUFFER, buffers[VERTICES]);
-//        glVertexPointer(3, GL_FLOAT, 0, 0);
-//        glBindBuffer(GL_ARRAY_BUFFER, buffers[COLORS]);
-//        glColorPointer(3, GL_FLOAT, 0, 0);
-//        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[INDICES]);
-//    }
-//            break;
-//    }
-//
-//    /* Render using chosen dereference technique. */
-//    switch (derefMethod) {
-//        case DRAWARRAYS:
-//            glDrawArrays(GL_QUADS, 0, 24);
-//            break;
-//        case MULTIDRAWARRAYS:
-//            /* Just an example to demonstrate usage - no advantage to use
-//             * glMultiDrawArrays for cube as all primitives are quads and same
-//             * size so glDrawArrays does the job.
-//             */
-//            glMultiDrawArrays(GL_QUADS, indicesFirsts, indicesCounts, numQuads);
-//            break;
-//        case ARRAYELEMENT:
-//            glBegin(GL_QUADS);
-//            for (i = 0; i < numQuads; i++)
-//                for (j = 0; j < 4; j++)
-//                    glArrayElement(((GLuint*)indices1DArrayOfArray[i])[j]);
-//            glEnd();
-//            break;
-//        case DRAWELEMENTS:
-//            for (i = 0; i < numQuads; i++)
-//                if (renMode == VERTEX_ARRAY)
-//                    /* Can use either indices1DArray or indices2DArrays */
-//                    glDrawElements(GL_QUADS, 4, GL_UNSIGNED_INT, &indices1DArray[i*4]);
-//                else  if (renMode == VERTEX_BUFFER_OBJECT)
-//                    glDrawElements(GL_QUADS, 4, GL_UNSIGNED_INT, indicesOffsets[i]);
-//            break;
-//        case DRAWELEMENTSALL:
-//            if (renMode == VERTEX_ARRAY)
-//                glDrawElements(GL_QUADS, 24, GL_UNSIGNED_INT, indices1DArray);
-//            else  if (renMode == VERTEX_BUFFER_OBJECT)
-//                glDrawElements(GL_QUADS, 24, GL_UNSIGNED_INT, 0);
-//            break;
-//        case MULTIDRAWELEMENTS:
-//            /* Another example just to demonstrate usage.  Like
-//             * glMultiDrawArrays, no advantage using the 'multi' version for
-//             * cube consisting of quads as all same size.
-//             */
-//            if (renMode == VERTEX_ARRAY)
-//                glMultiDrawElements(GL_QUADS, indicesCounts, GL_UNSIGNED_INT,
-//                                    indices1DArrayOfArray, numQuads);
-//            else  if (renMode == VERTEX_BUFFER_OBJECT)
-//                glMultiDrawElements(GL_QUADS, indicesCounts, GL_UNSIGNED_INT,
-//                                    indicesOffsets, numQuads);
-//            break;
-//    }
-}
-
-
-/*
- * We reimplement GLUT's glutPostRedisplay() function.  Why? Because
- * it allows us to easily request a redraw, without having to worry
- * about doing redundant redraws of the scene. We use the
- * wantRedisplay variable as a latch that is cleared when a redraw is
- * done.
- */
-int wantRedisplay = 1;
-void postRedisplay()
-{
-    wantRedisplay = 1;
-}
-
-void quit(int code)
-{
-    SDL_DestroyWindow(window);
-    SDL_Quit();
-    exit(code);
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 // initialize lights
@@ -568,384 +354,442 @@ void initLights()
 }
 
 
-// OpenGL initialisation
-void init(void)
+
+///////////////////////////////////////////////////////////////////////////////
+// set camera position and lookat direction
+///////////////////////////////////////////////////////////////////////////////
+void setCamera(float posX, float posY, float posZ, float targetX, float targetY, float targetZ)
 {
-    glShadeModel (GL_FLAT);
-    glColor3f(1.0, 1.0, 1.0);
-    computeAndStoreGrid2D(rows, cols);
-    buildVBOs();
-}
-
-
-// Draws a wireframe box
-void myWireBox(float l, float h)
-{
-    glPushMatrix();
-    glScalef(0.5, 0.5, 0.5);
-    glScalef(l, h, 1.0);
-    glBegin(GL_LINE_LOOP);
-    glVertex2f(-1.0, -1.0);
-    glVertex2f(1.0, -1.0);
-    glVertex2f(1.0, 1.0);
-    glVertex2f(-1.0, 1.0);
-    glEnd();
-    glPopMatrix();
-}
-
-
-// Draws a wireframe diamond - a rotated box
-void myWireDiamond(float l, float h)
-{
-    glPushMatrix();
-    glScalef(l, h, 1.0);
-    glScalef(1.0/sqrt(2.0), 1.0/sqrt(2.0), 1.0);
-    glRotatef(45.0, 0.0, 0.0, 1.0);
-    myWireBox(1.0, 1.0);
-    glPopMatrix();
-}
-
-void DrawAxes(float len) {
-    glBegin(GL_LINES);
-    glColor3f(1.0, 0.0, 0.0);
-    glVertex3f(0.0, 0.0, 0.0);
-    glVertex3f(len, 0.0, 0.0);
-    glColor3f(0.0, 1.0, 0.0);
-    glVertex3f(0.0, 0.0, 0.0);
-    glVertex3f(0.0, len, 0.0);
-    glColor3f(0.0, 0.0, 1.0);
-    glVertex3f(0.0, 0.0, 0.0);
-    glVertex3f(0.0, 0.0, len);
-    glEnd();
-}
-
-void display(void)
-{
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glEnable(GL_BLEND);
-
-
-
-    glColor3f(1.0, 1.0, 1.0);
-
-    glPushMatrix();
-    /* Oblique view, scale cube */
-    glTranslated(camera.x,0,camera.z);
-    glRotatef(35.0, 1.0, 0.0, 0.0);
-    glRotatef(45.0, 0.0, 1.0, 0.0);
-    glScalef(1.5, 1.5 , 1.5);
-
-
-    // Draw grid
-    printf("mode %d\n", mode);
-    switch (mode) {
-        case IM:
-            drawGrid2D(rows, cols);
-            break;
-        case SA:
-            drawGrid2DStoredVertices(rows, cols);
-            break;
-        case SAI:
-            drawGrid2DStoredVerticesAndIndices(rows, cols);
-            break;
-        case VA:
-            enableVAs();
-            drawGrid2DVAs(rows, cols);
-            disableVAs();
-            break;
-        case VBO:
-            enableVBOs();
-            drawGrid2DVBOs(rows, cols);
-            disableVBOs();
-            break;
-        case nM:
-            break;
-    }
-
-    DrawAxes(1);
-//    DrawRobotArm();
-    if (renMode == IMMEDIATE_MODE)
-        renderCubeIM();
-    else if (renMode == VERTEX_ARRAY || renMode == VERTEX_BUFFER_OBJECT)
-        renderCubeVAVBO();
-    // Does the same thing as glutSwapBuffers
-    glPopMatrix();
-    SDL_GL_SwapWindow(window);
-
-    // Check for OpenGL errors at least once per frame
-    int err;
-    while ((err = glGetError()) != GL_NO_ERROR) {
-        printf("display: %s\n",gluErrorString(err));
-    }
-}
-
-void reshape(int w, int h)
-{
-    glViewport(0, 0, (GLsizei) w, (GLsizei) h);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(-5.0, 20.0, -5.0, 20.0, 0.1, 100.0);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    glTranslatef (0.0, 10.0, -15.0);
-
-//    glViewport (0, 0, (GLsizei) w, (GLsizei) h);
-//    glMatrixMode(GL_PROJECTION);
-//    glLoadIdentity();
-//    glMatrixMode(GL_MODELVIEW);
-//    glLoadIdentity();
-//
-//    glMatrixMode(GL_PROJECTION);
-//    glOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
-//    glMatrixMode(GL_MODELVIEW);
+    gluLookAt(posX, posY, posZ, targetX, targetY, targetZ, 0, 1, 0); // eye(x,y,z), focal(x,y,z), up(x,y,z)
 }
 
-// Key down events
-void keyDown(SDL_KeyboardEvent *e)
+
+
+///////////////////////////////////////////////////////////////////////////////
+// generate vertex buffer object and bind it with its data
+// You must give 2 hints about data usage; target and mode, so that OpenGL can
+// decide which data should be stored and its location.
+// VBO works with 2 different targets; GL_ARRAY_BUFFER for vertex arrays
+// and GL_ELEMENT_ARRAY_BUFFER for index array in glDrawElements().
+// The default target is GL_ARRAY_BUFFER.
+// By default, usage mode is set as GL_STATIC_DRAW.
+// Other usages are GL_STREAM_DRAW, GL_STREAM_READ, GL_STREAM_COPY,
+// GL_STATIC_DRAW, GL_STATIC_READ, GL_STATIC_COPY,
+// GL_DYNAMIC_DRAW, GL_DYNAMIC_READ, GL_DYNAMIC_COPY.
+///////////////////////////////////////////////////////////////////////////////
+GLuint createVBO(const void* data, int dataSize, GLenum target, GLenum usage)
 {
-    switch (e->keysym.sym) {
-        case SDLK_ESCAPE:
-            quit(0);
-            break;
-        case SDLK_LCTRL:
-            printf("LCTRL\n");
+    GLuint id = 0;  // 0 is reserved, glGenBuffersARB() will return non-zero id if success
+
+    glGenBuffers(1, &id);                           // create a vbo
+    glBindBuffer(target, id);                       // activate vbo id to use
+    glBufferData(target, dataSize, data, usage);    // upload data to video card
+
+    // check data size in VBO is same as input array, if not return 0 and delete VBO
+    int bufferSize = 0;
+    glGetBufferParameteriv(target, GL_BUFFER_SIZE, &bufferSize);
+    if(dataSize != bufferSize)
+    {
+        glDeleteBuffers(1, &id);
+        id = 0;
+        std::cout << "[createVBO()] Data size is mismatch with input array\n";
+    }
+
+    return id;      // return VBO id
+}
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// destroy a VBO
+// If VBO id is not valid or zero, then OpenGL ignores it silently.
+///////////////////////////////////////////////////////////////////////////////
+void deleteVBO(const GLuint vboId)
+{
+    glDeleteBuffers(1, &vboId);
+}
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// wobble the vertex in and out along normal
+///////////////////////////////////////////////////////////////////////////////
+void updateVertices(float* dstVertices, float* srcVertices, float* srcNormals, int count, float time)
+{
+    if(!dstVertices || !srcVertices || !srcNormals)
+        return;
+
+    WaveFunc wave;
+    wave.func = FUNC_SIN;   // sine wave function
+    wave.amp = 0.08f;       // amplitude
+    wave.freq = 1.0f;       // cycles/sec
+    wave.phase = 0;         // horizontal shift
+    wave.offset = 0;        // vertical shift
+
+    float waveLength = 1.5f;
+    float height;
+    float x, y, z;
+
+    for(int i=0; i < count; ++i)
+    {
+        // get source from original vertex array
+        x = *srcVertices; ++srcVertices;
+        y = *srcVertices; ++srcVertices;
+        z = *srcVertices; ++srcVertices;
+
+        // compute phase (horizontal shift)
+        wave.phase = (x + y + z) / waveLength;
+
+        height = wave.update(time);
+
+        // update vertex coords
+        *dstVertices = x + (height * *srcNormals);  // x
+        ++dstVertices; ++srcNormals;
+        *dstVertices = y + (height * *srcNormals);  // y
+        ++dstVertices; ++srcNormals;
+        *dstVertices = z + (height * *srcNormals);  // z
+        ++dstVertices; ++srcNormals;
+    }
+}
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// display info messages
+///////////////////////////////////////////////////////////////////////////////
+void showInfo()
+{
+    // backup current model-view matrix
+    glPushMatrix();                 // save current modelview matrix
+    glLoadIdentity();               // reset modelview matrix
+
+    // set to 2D orthogonal projection
+    glMatrixMode(GL_PROJECTION);    // switch to projection matrix
+    glPushMatrix();                 // save current projection matrix
+    glLoadIdentity();               // reset projection matrix
+    gluOrtho2D(0, screenWidth, 0, screenHeight); // set to orthogonal projection
+
+    float color[4] = {1, 1, 1, 1};
+
+    std::stringstream ss;
+    ss << "VBO: " << (vboUsed ? "on" : "off") << std::ends;  // add 0(ends) at the end
+    drawString(ss.str().c_str(), 1, screenHeight-TEXT_HEIGHT, color, font);
+    ss.str(""); // clear buffer
+
+    ss << std::fixed << std::setprecision(3);
+    ss << "Updating Time: " << updateTime << " ms" << std::ends;
+    drawString(ss.str().c_str(), 1, screenHeight-(2*TEXT_HEIGHT), color, font);
+    ss.str("");
+
+    ss << "Drawing Time: " << drawTime << " ms" << std::ends;
+    drawString(ss.str().c_str(), 1, screenHeight-(3*TEXT_HEIGHT), color, font);
+    ss.str("");
+
+    ss << "Press SPACE key to toggle VBO on/off." << std::ends;
+    drawString(ss.str().c_str(), 1, 1, color, font);
+
+    // unset floating format
+    ss << std::resetiosflags(std::ios_base::fixed | std::ios_base::floatfield);
+
+    // restore projection matrix
+    glPopMatrix();                   // restore to previous projection matrix
+
+    // restore modelview matrix
+    glMatrixMode(GL_MODELVIEW);      // switch to modelview matrix
+    glPopMatrix();                   // restore to previous modelview matrix
+}
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// display frame rates
+///////////////////////////////////////////////////////////////////////////////
+void showFPS()
+{
+    static Timer timer;
+    static int count = 0;
+    static std::string fps = "0.0 FPS";
+    double elapsedTime = 0.0;;
+
+    // update fps every second
+    ++count;
+    elapsedTime = timer.getElapsedTime();
+    if(elapsedTime > 1.0)
+    {
+        std::stringstream ss;
+        ss << std::fixed << std::setprecision(1);
+        ss << (count / elapsedTime) << " FPS" << std::ends; // update fps string
+        ss << std::resetiosflags(std::ios_base::fixed | std::ios_base::floatfield);
+        fps = ss.str();
+        count = 0;                      // reset counter
+        timer.start();                  // restart timer
+    }
+
+    // backup current model-view matrix
+    glPushMatrix();                     // save current modelview matrix
+    glLoadIdentity();                   // reset modelview matrix
+
+    // set to 2D orthogonal projection
+    glMatrixMode(GL_PROJECTION);        // switch to projection matrix
+    glPushMatrix();                     // save current projection matrix
+    glLoadIdentity();                   // reset projection matrix
+    gluOrtho2D(0, screenWidth, 0, screenHeight); // set to orthogonal projection
+
+    float color[4] = {1, 1, 0, 1};
+    int textWidth = (int)fps.size() * TEXT_WIDTH;
+    drawString(fps.c_str(), screenWidth-textWidth, screenHeight-TEXT_HEIGHT, color, font);
+
+    // restore projection matrix
+    glPopMatrix();                      // restore to previous projection matrix
+
+    // restore modelview matrix
+    glMatrixMode(GL_MODELVIEW);         // switch to modelview matrix
+    glPopMatrix();                      // restore to previous modelview matrix
+}
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// set projection matrix as orthogonal
+///////////////////////////////////////////////////////////////////////////////
+void toOrtho()
+{
+    // set viewport to be the entire window
+    glViewport(0, 0, (GLsizei)screenWidth, (GLsizei)screenHeight);
+
+    // set orthographic viewing frustum
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(0, screenWidth, 0, screenHeight, -1, 1);
+
+    // switch to modelview matrix in order to set scene
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+}
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// set the projection matrix as perspective
+///////////////////////////////////////////////////////////////////////////////
+void toPerspective()
+{
+    // set viewport to be the entire window
+    glViewport(0, 0, (GLsizei)screenWidth, (GLsizei)screenHeight);
+
+    // set perspective viewing frustum
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(45.0f, (float)(screenWidth)/screenHeight, 1.0f, 1000.0f); // FOV, AspectRatio, NearClip, FarClip
+
+    // switch to modelview matrix in order to set scene
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+}
+
+
+
+
+
+
+
+//=============================================================================
+// CALLBACKS
+//=============================================================================
+
+void displayCB()
+{
+    // clear buffer
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+    // save the initial ModelView matrix before modifying ModelView matrix
+    glPushMatrix();
+
+    // tramsform camera
+    glTranslatef(0, 0, -cameraDistance);
+    glRotatef(cameraAngleX, 1, 0, 0);   // pitch
+    glRotatef(cameraAngleY, 0, 1, 0);   // heading
+
+    // transform teapot
+    glTranslatef(0, -1.57f, 0);
+
+    t1.start(); //==============================================================
+
+    if(vboUsed) // draw teapot using VBOs
+    {
+        // bind VBOs with IDs and set the buffer offsets of the bound VBOs
+        // When buffer object is bound with its ID, all pointers in gl*Pointer()
+        // are treated as offset instead of real pointer.
+        glBindBuffer(GL_ARRAY_BUFFER, vboId1);
+
+        // measure the elapsed time of updateVertices()
+        t2.start(); //---------------------------------------------------------
+
+        // map the buffer object into client's memory
+        // Note that glMapBuffer() causes sync issue.
+        // If GPU is working with this buffer, glMapBufferARB() will wait(stall)
+        // for GPU to finish its job.
+        float *ptr = (float*)glMapBuffer(GL_ARRAY_BUFFER, GL_READ_WRITE);
+        if(ptr)
+        {
+            // wobble vertex in and out along normal
+            updateVertices(ptr, srcVertices, teapotNormals, vertexCount, (float)timer.getElapsedTime());
+            glUnmapBuffer(GL_ARRAY_BUFFER);     // release pointer to mapping buffer
+        }
+
+        t2.stop(); //----------------------------------------------------------
+        updateTime = (float)t2.getElapsedTimeInMilliSec();
+
+        // before draw, specify vertex and index arrays with their offsets
+        glNormalPointer(GL_FLOAT, 0, (void*)sizeof(teapotVertices));
+        glVertexPointer(3, GL_FLOAT, 0, 0);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboId2);
+
+        drawTeapotVBO();
+
+        // it is good idea to release VBOs with ID 0 after use.
+        // Once bound with 0, all pointers in gl*Pointer() behave as real
+        // pointer, so, normal vertex array operations are re-activated
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    }
+    else        // draw teapot using vertex array method
+    {
+        t2.start(); //---------------------------------------------------------
+
+        // wobbling vertices along normals
+        updateVertices(teapotVertices, srcVertices, teapotNormals, vertexCount, (float)timer.getElapsedTime());
+
+        t2.stop(); //----------------------------------------------------------
+        updateTime = (float)t2.getElapsedTimeInMilliSec();
+
+        drawTeapot();
+    }
+
+    t1.stop(); //===============================================================
+    drawTime = (float)t1.getElapsedTimeInMilliSec() - updateTime;
+
+    // draw info messages
+    showInfo();
+    showFPS();
+
+    glPopMatrix();
+
+    glutSwapBuffers();
+}
+
+
+void reshapeCB(int w, int h)
+{
+    screenWidth = w;
+    screenHeight = h;
+    toPerspective();
+}
+
+
+void timerCB(int millisec)
+{
+    glutTimerFunc(millisec, timerCB, millisec);
+    glutPostRedisplay();
+}
+
+
+void idleCB()
+{
+    glutPostRedisplay();
+}
+
+
+void keyboardCB(unsigned char key, int x, int y)
+{
+    switch(key)
+    {
+        case 27: // ESCAPE
+            exit(0);
             break;
 
-        case SDLK_w:
-            camera.x++;
+        case ' ':
+            if(vboSupported)
+                vboUsed = !vboUsed;
             break;
 
-        case SDLK_s:
-            camera.x--;
-            break;
-
-        case SDLK_a:
-            camera.z++;
-            break;
-
-        case SDLK_d:
-            camera.z--;
-            break;
-
-        case SDLK_m:
-            if (mode == VA)
-                disableVAs();
-            if (mode == VBO)
-                disableVBOs();
-
-            if (mode >= nM)
-                mode = IM;
-            if (mode == VA)
-                enableVAs();
-            if (mode == VBO)
-                enableVBOs();
+        case 'd': // switch rendering modes (fill -> wire -> point)
+        case 'D':
+            ++drawMode;
+            drawMode %= 3;
+            if(drawMode == 0)        // fill mode
+            {
+                glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+                glEnable(GL_DEPTH_TEST);
+                glEnable(GL_CULL_FACE);
+            }
+            else if(drawMode == 1)  // wireframe mode
+            {
+                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+                glDisable(GL_DEPTH_TEST);
+                glDisable(GL_CULL_FACE);
+            }
+            else                    // point mode
+            {
+                glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+                glDisable(GL_DEPTH_TEST);
+                glDisable(GL_CULL_FACE);
+            }
             break;
 
         default:
-            break;
+            ;
     }
-
-    postRedisplay();
 }
 
-// Key up events
-void keyUp(SDL_KeyboardEvent *e)
+
+void mouseCB(int button, int state, int x, int y)
 {
+    mouseX = x;
+    mouseY = y;
 
-}
-
-void eventDispatcher()
-{
-    SDL_Event e;
-
-    // Handle events
-    while (SDL_PollEvent(&e)) {
-        switch (e.type) {
-            case SDL_QUIT:
-                if (debug)
-                    printf("Quit\n");
-                quit(0);
-                break;
-            case SDL_MOUSEMOTION:
-                if (debug)
-                    printf("Mouse moved by %d,%d to (%d,%d)\n",
-                           e.motion.xrel, e.motion.yrel, e.motion.x, e.motion.y);
-                break;
-            case SDL_MOUSEBUTTONDOWN:
-                if (debug)
-                    printf("Mouse button %d pressed at (%d,%d)\n",
-                           e.button.button, e.button.x, e.button.y);
-                break;
-            case SDL_KEYDOWN:
-                keyDown(&e.key);
-                break;
-            case SDL_WINDOWEVENT:
-                if (debug)
-                    printf("Window event %d\n", e.window.event);
-                switch (e.window.event)
-                {
-                    case SDL_WINDOWEVENT_SHOWN:
-                        if (debug)
-                            SDL_Log("Window %d shown", e.window.windowID);
-                        break;
-                    case SDL_WINDOWEVENT_SIZE_CHANGED:
-                        if (debug)
-                            printf("SDL_WINDOWEVENT_SIZE_CHANGED\n");
-                        break;
-                    case SDL_WINDOWEVENT_RESIZED:
-                        if (debug)
-                            printf("SDL_WINDOWEVENT_RESIZED.\n");
-                        if (e.window.windowID == SDL_GetWindowID(window)) {
-                            SDL_SetWindowSize(window, e.window.data1, e.window.data2);
-                            reshape(e.window.data1, e.window.data2);
-                            postRedisplay();
-                        }
-                        break;
-                    case SDL_WINDOWEVENT_CLOSE:
-                        if (debug)
-                            printf("Window close event\n");
-                        break;
-                    default:
-                        break;
-                }
-                break;
-            default:
-                break;
+    if(button == GLUT_LEFT_BUTTON)
+    {
+        if(state == GLUT_DOWN)
+        {
+            mouseLeftDown = true;
         }
+        else if(state == GLUT_UP)
+            mouseLeftDown = false;
+    }
+
+    else if(button == GLUT_RIGHT_BUTTON)
+    {
+        if(state == GLUT_DOWN)
+        {
+            mouseRightDown = true;
+        }
+        else if(state == GLUT_UP)
+            mouseRightDown = false;
     }
 }
 
-static float tLast = 0.0;
-static float frameCountElapse = 0.0;
-// Used to update application state e.g. compute physics, game AI
-void update()
+
+void mouseMotionCB(int x, int y)
 {
-    float t, dt;
-
-    t = SDL_GetTicks() / (float) milli;
-
-    if (tLast < 0.0) {
-        tLast = t;
-        return;
+    if(mouseLeftDown)
+    {
+        cameraAngleY += (x - mouseX);
+        cameraAngleX += (y - mouseY);
+        mouseX = x;
+        mouseY = y;
     }
-
-    dt = t - tLast;
-
-    tLast = t;
-
-    frameCountElapse += dt;
-
-    /* Get elapsed time and convert to s */
-    g.t = SDL_GetTicks();
-    g.t /= 1000.0;
-
-    /* Calculate delta t */
-    g.dt = g.t - g.tLast;
-
-    /* Update tLast for next time, using static local variable */
-    g.tLast = g.t;
-
-    UpdateVertices();
-}
-
-[[noreturn]] /*
- * Since we no longer have glutMainLoop() to do all the work for us,
- * we now have to do it ourselves. Good and bad. Good in that we have
- * more control, bad in that we have to do more work. I think that
- * good outweighs bad by a long shot :)
- *
- * This is essentially what GLUT's main loop does.
- */
-void mainLoop()
-{
-    while (1) {
-        eventDispatcher();
-//        if (wantRedisplay) {
-            display();
-            wantRedisplay = 0;
-//        }
-        update();
+    if(mouseRightDown)
+    {
+        cameraDistance -= (y - mouseY) * 0.2f;
+        mouseY = y;
     }
 }
 
-/*
- * Function for setting up the SDL window. You don't have to do it in
- * a function like this. You can stick it directly in main() if you
- * wish.
- *
- * Do not put any OpenGL calls before this function is called!
- */
-int initGraphics()
+
+void exitCB()
 {
-    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-
-    window =
-            SDL_CreateWindow("Robot Arm Using SDL2",
-                             SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-                             640, 480, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-    if (!window) {
-        fprintf(stderr, "%s:%d: create window failed: %s\n",
-                __FILE__, __LINE__, SDL_GetError());
-        exit(EXIT_FAILURE);
-    }
-
-    SDL_GLContext mainGLContext = SDL_GL_CreateContext(window);
-    if (mainGLContext == 0) {
-        fprintf(stderr, "%s:%d: create context failed: %s\n",
-                __FILE__, __LINE__, SDL_GetError());
-        exit(EXIT_FAILURE);
-    }
-
-
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-//    glewInit();
-
-    int w, h;
-    SDL_GetWindowSize(window, &w, &h);
-    reshape(w, h);
-
-    return 0;
-}
-
-/*
- * This is automatically called when the program exits, thanks to
- * "atexit()" in main(). This is a good place to do your program
- * shutdown and free memory, etc.
- */
-void sys_shutdown()
-{
-    SDL_Quit();
-}
-
-
-int main(int argc, char** argv)
-{
-
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        fprintf(stderr, "%s:%d: unable to init SDL: %s\n",
-                __FILE__, __LINE__, SDL_GetError());
-        exit(EXIT_FAILURE);
-    }
-
-    // Set up the window and OpenGL rendering context
-    if (initGraphics()) {
-        SDL_Quit();
-        return EXIT_FAILURE;
-    }
-
-    // OpenGL initialisation, must be done before any OpenGL calls
-    init();
-
-    atexit(sys_shutdown);
-
-    mainLoop();
-
-    return EXIT_SUCCESS;
+    clearSharedMem();
 }
