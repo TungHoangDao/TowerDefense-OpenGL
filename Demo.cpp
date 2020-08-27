@@ -27,28 +27,6 @@
 #include <cstdlib>
 #include "Timer.h"
 
-/// Global controller.
-typedef struct {
-    float t;
-    float dt;
-    float tLast;
-    float startTime;
-    float waterT;
-    float go;
-
-    bool OSD;
-    int frames;
-    float frameRate;
-    float frameRateInterval;
-    float lastFrameRateT;
-
-    bool gameOver;
-
-    float mapArea;
-} global_t;
-
-global_t g = {0, 0, 0, 0, 0, 0, true, 0, 0, 0.2, 0, false};
-
 typedef struct {
     float x, y;
 } vec2f;
@@ -76,10 +54,8 @@ int nsw = 2;
 
 enum RenderMode {
     IMMEDIATE_MODE = 0,
-    VERTEX_ARRAY,
     VERTEX_BUFFER_OBJECT,
-    NUMRENMODES
-} renMode = VERTEX_ARRAY;
+} renMode = VERTEX_BUFFER_OBJECT;
 
 enum DerefMethods {
     DRAWARRAYS = 0,
@@ -119,8 +95,6 @@ void reshapeCB(int w, int h);
 void timerCB(int millisec);
 
 void idleCB();
-
-void keyboardCB(unsigned char key, int x, int y);
 
 void mouseCB(int button, int stat, int x, int y);
 
@@ -232,7 +206,7 @@ void showInfo() {
     float color[4] = {1, 1, 1, 1};
 
     std::stringstream ss;
-    ss << "VBO: " << (vboUsed ? "on" : "off") << std::ends;  // add 0(ends) at the end
+    ss << "VBO: " << (renMode == VERTEX_BUFFER_OBJECT ? "on" : "off") << std::ends;  // add 0(ends) at the end
     drawString(ss.str().c_str(), 1, screenHeight - TEXT_HEIGHT, color, font);
     ss.str(""); // clear buffer
 
@@ -245,7 +219,14 @@ void showInfo() {
     drawString(ss.str().c_str(), 1, screenHeight - (3 * TEXT_HEIGHT), color, font);
     ss.str("");
 
-    ss << "Press SPACE key to toggle VBO on/off." << std::ends;
+    if (renMode == VERTEX_BUFFER_OBJECT)
+    {
+        ss << "Press SPACE key to toggle VBO off." << std::ends;
+    }
+    else
+    {
+        ss << "Press SPACE key to toggle VBO on." << std::ends;
+    }
     drawString(ss.str().c_str(), 1, 1, color, font);
 
     // unset floating format
@@ -344,7 +325,7 @@ void disableVBOs() {
 }
 
 
-void calcSineWave3D(sinewave wave, float x, float z, float t, float *y, bool der, float *dydx) {
+void calcSineWave3D(sinewave wave, float x, float z, double t, float *y, bool der, float *dydx) {
     float angle = wave.k * x * x + wave.k * z * z + wave.w * t;
 //    float angle = wave.k * z * z  + wave.w * t;
 
@@ -360,15 +341,19 @@ void drawGrid2D(int rows, int cols) {
     glColor3f(1.0, 1.0, 1.0);
 
     /* Grid */
-    float dy = 2.0f / (float) rows;
-    float dx = 2.0f / (float) cols;
+    float dy = 20.0f / (float) rows;
+    float dx = 20.0f / (float) cols;
     for (int i = 0; i < cols; i++) {
         float x = -1.0 + i * dx;
         glBegin(GL_TRIANGLE_STRIP);
         for (int j = 0; j <= rows; j++) {
-            float y = -1.0 + j * dy;
-            glVertex3f(x, y, 0.0);
-            glVertex3f(x + dx, y, 0.0);
+            float z = -1.0 + j * dy;
+            float y;
+            float dxdy;
+            calcSineWave3D(sws[0], x, z, timer.getElapsedTime(), &y, false, &dxdy);
+            glVertex3f(x, y, z);
+            calcSineWave3D(sws[0], x+dx, z, timer.getElapsedTime(), &y, false, &dxdy);
+            glVertex3f(x + dx, y, z);
         }
         glEnd();
     }
@@ -403,7 +388,7 @@ void computeAndStoreGrid2D(int rows, int cols) {
             float z = -1.0 + j * dy;
             float y;
             float dxdy;
-            calcSineWave3D(sws[0], x, z, g.t, &y, false, &dxdy);
+            calcSineWave3D(sws[0], x, z, timer.getElapsedTime(), &y, false, &dxdy);
             vtx->r = (vec3f) {x, y, z};
             vtx++;
         }
@@ -520,26 +505,31 @@ void drawGrid2DVBOs(int rows, int cols) {
     glPopAttrib();
 }
 
-void UpdateVertices() {
 
-//    // bind then map the VBO
-//    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-//    float* ptr = (float*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-//
-//// if the pointer is valid (mapping was successful), update VBO
-//    if(ptr) {
-//        updateMyVBO(ptr, ...);    // modify buffer data
-//    glUnmapBuffer(GL_ARRAY_BUFFER); // unmap it after use }
-//// you can draw the updated VBO ...
-//
-//    for(int i = 0; i < n_vertices; i++)
-//    {
-//        Vertex *vertex = &vertices[i];
-//        float dxdy;
-//        calcSineWave3D(sws[0],vertex->r.x,vertex->r.z,g.t,&vertex->r.y,false,&dxdy);
-//    }
+
+///////////////////////////////////////////////////////////////////////////////
+// wobble the vertex in and out along normal
+///////////////////////////////////////////////////////////////////////////////
+void updateVertices(Vertex* dstVertices, Vertex* srcVertices, float* srcNormals, int count, float time)
+{
+    if(!dstVertices || !srcVertices)
+        return;
+
+    float x, y, z;
+
+    for(int i=0; i < count; ++i)
+    {
+        x = srcVertices[i].r.x;
+        y = srcVertices[i].r.y;
+        z = srcVertices[i].r.z;
+
+        float dxdy;
+        calcSineWave3D(sws[0],x,z,time,&y,false,&dxdy);
+
+        // update vertex coords
+        dstVertices[i].r.y = y;
+    }
 }
-
 
 void checkForGLerrors(int lineno) {
     GLenum error;
@@ -753,43 +743,43 @@ void display(void) {
     glRotatef(cameraAngleX, 1, 0, 0);   // pitch
     glRotatef(cameraAngleY, 0, 1, 0);   // heading
 
-//    glTranslatef(0, -1.57f, 0);
+    glTranslatef(0, -1.57f, 0);
 
     t1.start();
 
+    DrawAxes(1);
+
     // Draw grid
-    printf("mode %d\n", mode);
-    switch (mode) {
-        case IM:
-            drawGrid2D(rows, cols);
-            break;
-        case SA:
-            drawGrid2DStoredVertices(rows, cols);
-            break;
-        case SAI:
-            drawGrid2DStoredVerticesAndIndices(rows, cols);
-            break;
-        case VA:
-            enableVAs();
-            drawGrid2DVAs(rows, cols);
-            disableVAs();
-            break;
-        case VBO:
-            enableVBOs();
-            drawGrid2DVBOs(rows, cols);
-            disableVBOs();
-            break;
-        case nM:
-            break;
+    if (renMode == IMMEDIATE_MODE)
+    {
+        drawGrid2D(rows, cols);
+    }
+    else if (renMode == VERTEX_BUFFER_OBJECT)
+    {
+        enableVBOs();
+
+        // measure the elapsed time of updateVertices()
+        t2.start(); //---------------------------------------------------------
+
+        // map the buffer object into client's memory
+        // Note that glMapBuffer() causes sync issue.
+        // If GPU is working with this buffer, glMapBufferARB() will wait(stall)
+        // for GPU to finish its job.
+        auto *ptr = (Vertex *)glMapBuffer(GL_ARRAY_BUFFER, GL_READ_WRITE);
+        if(ptr)
+        {
+            // wobble vertex in and out along normal
+            updateVertices(ptr, vertices, nullptr, n_vertices, (float)timer.getElapsedTime());
+            glUnmapBuffer(GL_ARRAY_BUFFER);     // release pointer to mapping buffer
+        }
+
+        t2.stop(); //----------------------------------------------------------
+        updateTime = (float)t2.getElapsedTimeInMilliSec();
+
+        drawGrid2DVBOs(rows, cols);
+        disableVBOs();
     }
 
-    DrawAxes(1);
-//    DrawRobotArm();
-    if (renMode == IMMEDIATE_MODE)
-        renderCubeIM();
-    else if (renMode == VERTEX_ARRAY || renMode == VERTEX_BUFFER_OBJECT)
-        renderCubeVAVBO();
-    // Does the same thing as glutSwapBuffers
     glPopMatrix();
 
     t1.stop(); //===============================================================
@@ -797,8 +787,10 @@ void display(void) {
 
     showFPS();
     showInfo();
+
     SDL_GL_SwapWindow(window);
 
+    printf("mode %d\n", renMode);
     // Check for OpenGL errors at least once per frame
     int err;
     while ((err = glGetError()) != GL_NO_ERROR) {
@@ -870,18 +862,19 @@ void keyDown(SDL_KeyboardEvent *e) {
         case SDLK_d:
             break;
 
-        case SDLK_m:
-            if (mode == VA)
-                disableVAs();
-            if (mode == VBO)
-                disableVBOs();
+        case SDLK_SPACE:
+        {
+            if (renMode == VERTEX_BUFFER_OBJECT)
+            {
+                renMode = IMMEDIATE_MODE;
+            }
+            else{
+                renMode = VERTEX_BUFFER_OBJECT;
+            }
+            break;
+        }
 
-            if (mode >= nM)
-                mode = IM;
-            if (mode == VA)
-                enableVAs();
-            if (mode == VBO)
-                enableVBOs();
+        case SDLK_m:
             break;
 
         default:
@@ -939,6 +932,7 @@ void eventDispatcher() {
                     printf("Quit\n");
                 quit(0);
                 break;
+
             case SDL_MOUSEMOTION:
                 mouseMotionCB(e.motion.x, e.motion.y);
                 if (debug)
@@ -946,6 +940,7 @@ void eventDispatcher() {
                            e.motion.xrel, e.motion.yrel, e.motion.x, e.motion.y);
                 postRedisplay();
                 break;
+
             case SDL_MOUSEBUTTONDOWN:
                 mouseCB(e.button.button, SDL_MOUSEBUTTONDOWN, e.button.x, e.button.y);
                 if (debug)
@@ -953,6 +948,7 @@ void eventDispatcher() {
                            e.button.button, e.button.x, e.button.y);
                 postRedisplay();
                 break;
+
             case SDL_MOUSEBUTTONUP:
                 mouseCB(e.button.button, SDL_MOUSEBUTTONUP, e.button.x, e.button.y);
                 if (debug)
@@ -965,6 +961,7 @@ void eventDispatcher() {
             case SDL_KEYDOWN:
                 keyDown(&e.key);
                 break;
+
             case SDL_WINDOWEVENT:
                 if (debug)
                     printf("Window event %d\n", e.window.event);
@@ -1000,37 +997,9 @@ void eventDispatcher() {
     }
 }
 
-static float tLast = 0.0;
-static float frameCountElapse = 0.0;
 
 // Used to update application state e.g. compute physics, game AI
 void update() {
-    float t, dt;
-
-    t = SDL_GetTicks() / (float) milli;
-
-    if (tLast < 0.0) {
-        tLast = t;
-        return;
-    }
-
-    dt = t - tLast;
-
-    tLast = t;
-
-    frameCountElapse += dt;
-
-    /* Get elapsed time and convert to s */
-    g.t = SDL_GetTicks();
-    g.t /= 1000.0;
-
-    /* Calculate delta t */
-    g.dt = g.t - g.tLast;
-
-    /* Update tLast for next time, using static local variable */
-    g.tLast = g.t;
-
-    UpdateVertices();
 }
 
 [[noreturn]] /*
@@ -1105,6 +1074,39 @@ void sys_shutdown() {
 }
 
 
+
+///////////////////////////////////////////////////////////////////////////////
+// initialize OpenGL
+// disable unused features
+///////////////////////////////////////////////////////////////////////////////
+void initGL()
+{
+    glShadeModel(GL_SMOOTH);                    // shading mathod: GL_SMOOTH or GL_FLAT
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);      // 4-byte pixel alignment
+
+    // enable /disable features
+    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+    //glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+    //glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_LIGHTING);
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_CULL_FACE);
+
+    // track material ambient and diffuse from surface color, call it before glEnable(GL_COLOR_MATERIAL)
+    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+    glEnable(GL_COLOR_MATERIAL);
+
+    glClearColor(0, 0, 0, 0);                   // background color
+    glClearStencil(0);                          // clear stencil buffer
+    glClearDepth(1.0f);                         // 0 is near, 1 is far
+    glDepthFunc(GL_LEQUAL);
+
+    initLights();
+}
+
+
+
 int main(int argc, char **argv) {
     glutInit(&argc, argv);
 
@@ -1123,6 +1125,7 @@ int main(int argc, char **argv) {
     // OpenGL initialisation, must be done before any OpenGL calls
     init();
     initSharedMem();
+//    initGL();
     atexit(sys_shutdown);
 
     timer.start();
