@@ -1,14 +1,3 @@
-/*
- * robot arm using SDL2
- *
- * This program shows how to composite modeling transformations
- * to draw translated and rotated hierarchical models.
- * Interaction:  pressing the s and e keys (shoulder and elbow)
- * alters the rotation of the robot arm shoulder and elbow.
- * Also left and right plates of the gripper.
- *
- * Originally based on the Redbook robot arm example.
- */
 #define GLEW_STATIC
 
 #include <GL/glew.h>
@@ -31,9 +20,17 @@ typedef struct {
     float x, y;
 } vec2f;
 
+typedef struct {
+    float x, y, z;
+} vec3f;
+
+typedef struct {
+    vec3f r, n;
+} Vertex;
+
+
 // Globals
 bool debug = true;
-float shoulder, elbow, wrist, left_plate, right_plate;
 SDL_Window *window;
 const float gripper_increment = .2;
 const int milli = 1000;
@@ -67,24 +64,18 @@ enum DerefMethods {
     NUMDEREFMETHODS
 } derefMethod = MULTIDRAWELEMENTS;
 
-#define BUFFER_OFFSET(i) ((void*)(i))
 
-typedef struct {
-    float x, y, z;
-} vec3f;
-typedef struct {
-    vec3f r, n;
-} Vertex;
+enum {
+    IM = 0, SA, SAI, VA, VBO, nM
+} mode = VBO;
+
+#define BUFFER_OFFSET(i) ((void*)(i))
 
 Vertex *vertices;
 unsigned *indices;
 unsigned n_vertices, n_indices;
 unsigned vbo, ibo;
 unsigned rows = 50, cols = 50;
-
-enum {
-    IM = 0, SA, SAI, VA, VBO, nM
-} mode = VBO;
 
 
 // GLUT CALLBACK functions
@@ -324,7 +315,6 @@ void disableVBOs() {
 
 }
 
-
 void calcSineWave3D(sinewave wave, float x, float z, double t, float *y, bool der, float *dydx) {
     float angle = wave.k * x * x + wave.k * z * z + wave.w * t;
 //    float angle = wave.k * z * z  + wave.w * t;
@@ -334,7 +324,6 @@ void calcSineWave3D(sinewave wave, float x, float z, double t, float *y, bool de
         *dydx = wave.k * wave.A * cosf(angle);
     }
 }
-
 void drawGrid2D(int rows, int cols) {
     glPushAttrib(GL_CURRENT_BIT);
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -421,7 +410,6 @@ void computeAndStoreGrid2D(int rows, int cols) {
 }
 
 #define DEBUG_DRAW_GRID_ARRAY
-
 void drawGrid2DStoredVertices(int rows, int cols) {
     glPushAttrib(GL_CURRENT_BIT);
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -447,7 +435,6 @@ void drawGrid2DStoredVertices(int rows, int cols) {
 
     glPopAttrib();
 }
-
 void drawGrid2DStoredVerticesAndIndices(int rows, int cols) {
     glPushAttrib(GL_CURRENT_BIT);
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -473,7 +460,6 @@ void drawGrid2DStoredVerticesAndIndices(int rows, int cols) {
 
     glPopAttrib();
 }
-
 void drawGrid2DVAs(int rows, int cols) {
     glPushAttrib(GL_CURRENT_BIT);
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -488,7 +474,6 @@ void drawGrid2DVAs(int rows, int cols) {
 
     glPopAttrib();
 }
-
 void drawGrid2DVBOs(int rows, int cols) {
     glPushAttrib(GL_CURRENT_BIT);
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -536,108 +521,6 @@ void checkForGLerrors(int lineno) {
     while ((error = glGetError()) != GL_NO_ERROR)
         printf("%d: %s\n", lineno, gluErrorString(error));
 }
-
-
-/* Immediate mode, vertex at a time */
-void renderCubeIM() {
-//    int i, j;
-//
-//    glBegin(GL_QUADS);
-//    for (i = 0; i < numQuads; i++)
-//        for (j = 0; j < 4; j++) {
-//            glColor3fv(&colors[indices1DArray[i*4+j]*3]);
-//            glVertex3fv(&vertices[indices1DArray[i*4+j]*3]);
-//        }
-//    glEnd();
-}
-
-/* Use VAs or VBOs */
-void renderCubeVAVBO() {
-//    int i, j;
-//
-//    /* Bind/unbind buffers and set vertex and color array pointers */
-//    switch (derefMethod) {
-//        case DRAWARRAYS:
-//        case MULTIDRAWARRAYS:
-//            if (renMode == VERTEX_ARRAY) {
-//                glBindBuffer(GL_ARRAY_BUFFER, 0);
-//                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-//                glVertexPointer(3, GL_FLOAT, 0, verticesQuads);
-//                glColorPointer(3, GL_FLOAT, 0, colorsQuads);
-//            } else if (renMode == VERTEX_BUFFER_OBJECT) {
-//                glBindBuffer(GL_ARRAY_BUFFER, buffers[VERTICES_QUADS]);
-//                glVertexPointer(3, GL_FLOAT, 0, 0);
-//                glBindBuffer(GL_ARRAY_BUFFER, buffers[COLORS_QUADS]);
-//                glColorPointer(3, GL_FLOAT, 0, 0);
-//            }
-//            break;
-//        case ARRAYELEMENT:
-//        case DRAWELEMENTS:
-//        case DRAWELEMENTSALL:
-//        case MULTIDRAWELEMENTS:
-//            if (renMode == VERTEX_ARRAY) {
-//                glBindBuffer(GL_ARRAY_BUFFER, 0);
-//                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-//                glVertexPointer(3, GL_FLOAT, 0, vertices);
-//                glColorPointer(3, GL_FLOAT, 0, colors);
-//            }  if (renMode == VERTEX_BUFFER_OBJECT) {
-//        glBindBuffer(GL_ARRAY_BUFFER, buffers[VERTICES]);
-//        glVertexPointer(3, GL_FLOAT, 0, 0);
-//        glBindBuffer(GL_ARRAY_BUFFER, buffers[COLORS]);
-//        glColorPointer(3, GL_FLOAT, 0, 0);
-//        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[INDICES]);
-//    }
-//            break;
-//    }
-//
-//    /* Render using chosen dereference technique. */
-//    switch (derefMethod) {
-//        case DRAWARRAYS:
-//            glDrawArrays(GL_QUADS, 0, 24);
-//            break;
-//        case MULTIDRAWARRAYS:
-//            /* Just an example to demonstrate usage - no advantage to use
-//             * glMultiDrawArrays for cube as all primitives are quads and same
-//             * size so glDrawArrays does the job.
-//             */
-//            glMultiDrawArrays(GL_QUADS, indicesFirsts, indicesCounts, numQuads);
-//            break;
-//        case ARRAYELEMENT:
-//            glBegin(GL_QUADS);
-//            for (i = 0; i < numQuads; i++)
-//                for (j = 0; j < 4; j++)
-//                    glArrayElement(((GLuint*)indices1DArrayOfArray[i])[j]);
-//            glEnd();
-//            break;
-//        case DRAWELEMENTS:
-//            for (i = 0; i < numQuads; i++)
-//                if (renMode == VERTEX_ARRAY)
-//                    /* Can use either indices1DArray or indices2DArrays */
-//                    glDrawElements(GL_QUADS, 4, GL_UNSIGNED_INT, &indices1DArray[i*4]);
-//                else  if (renMode == VERTEX_BUFFER_OBJECT)
-//                    glDrawElements(GL_QUADS, 4, GL_UNSIGNED_INT, indicesOffsets[i]);
-//            break;
-//        case DRAWELEMENTSALL:
-//            if (renMode == VERTEX_ARRAY)
-//                glDrawElements(GL_QUADS, 24, GL_UNSIGNED_INT, indices1DArray);
-//            else  if (renMode == VERTEX_BUFFER_OBJECT)
-//                glDrawElements(GL_QUADS, 24, GL_UNSIGNED_INT, 0);
-//            break;
-//        case MULTIDRAWELEMENTS:
-//            /* Another example just to demonstrate usage.  Like
-//             * glMultiDrawArrays, no advantage using the 'multi' version for
-//             * cube consisting of quads as all same size.
-//             */
-//            if (renMode == VERTEX_ARRAY)
-//                glMultiDrawElements(GL_QUADS, indicesCounts, GL_UNSIGNED_INT,
-//                                    indices1DArrayOfArray, numQuads);
-//            else  if (renMode == VERTEX_BUFFER_OBJECT)
-//                glMultiDrawElements(GL_QUADS, indicesCounts, GL_UNSIGNED_INT,
-//                                    indicesOffsets, numQuads);
-//            break;
-//    }
-}
-
 
 /*
  * We reimplement GLUT's glutPostRedisplay() function.  Why? Because
