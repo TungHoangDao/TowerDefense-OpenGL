@@ -81,7 +81,7 @@ unsigned *indices;
 unsigned n_vertices, n_indices;
 unsigned vbo, ibo;
 unsigned rows = 50, cols = 50;
-
+bool lightMode = true;
 
 void idleCB();
 
@@ -196,17 +196,29 @@ void showInfo() {
     float color[4] = {1, 1, 1, 1};
 
     std::stringstream ss;
-    ss << "MODE: " << MODE_STRING[(int)renMode] << std::ends;  // add 0(ends) at the end
+    ss << "MODE (SPACE): " << MODE_STRING[(int)renMode] << std::ends;  // add 0(ends) at the end
     drawString(ss.str().c_str(), 1, screenHeight - TEXT_HEIGHT, color, font);
     ss.str(""); // clear buffer
 
     ss << std::fixed << std::setprecision(3);
     ss << "Updating Time: " << updateTime << " ms" << std::ends;
-    drawString(ss.str().c_str(), 1, screenHeight - (2 * TEXT_HEIGHT), color, font);
+    drawString(ss.str().c_str(), 1, screenHeight - (3 * TEXT_HEIGHT), color, font);
     ss.str("");
 
     ss << "Drawing Time: " << drawTime << " ms" << std::ends;
-    drawString(ss.str().c_str(), 1, screenHeight - (3 * TEXT_HEIGHT), color, font);
+    drawString(ss.str().c_str(), 1, screenHeight - (5 * TEXT_HEIGHT), color, font);
+    ss.str("");
+
+    ss << "Light (l): " << (lightMode ? "on" : "off") << std::ends;
+    drawString(ss.str().c_str(), 1, screenHeight - (7 * TEXT_HEIGHT), color, font);
+    ss.str("");
+
+    ss << "Fill (f): " << (fillMode ? "on" : "off") << std::ends;
+    drawString(ss.str().c_str(), 1, screenHeight - (9 * TEXT_HEIGHT), color, font);
+    ss.str("");
+
+    ss << "Drawing: " << "row: " << rows << " col: " << cols << " Vertices: " << n_vertices << std::ends;
+    drawString(ss.str().c_str(), 1, screenHeight - (11 * TEXT_HEIGHT), color, font);
     ss.str("");
 
     ss << "Press SPACE key to toggle between Mode" << std::ends;
@@ -779,6 +791,19 @@ bool initSharedMem() {
 
 
 ///////////////////////////////////////////////////////////////////////////////
+// destroy a VBO
+// If VBO id is not valid or zero, then OpenGL ignores it silently.
+///////////////////////////////////////////////////////////////////////////////
+void deleteVBO()
+{
+    glDeleteBuffers(1, &ibo);
+    glDeleteBuffers(1, &vbo);
+    ibo = vbo = 0;
+}
+
+
+
+///////////////////////////////////////////////////////////////////////////////
 // set the projection matrix as perspective
 ///////////////////////////////////////////////////////////////////////////////
 void toPerspective() {
@@ -823,6 +848,46 @@ void keyDown(SDL_KeyboardEvent *e) {
         case SDLK_d:
             break;
 
+        case SDLK_UP:
+            rows++;
+            computeAndStoreGrid2D(rows,cols);
+            deleteVBO();
+            buildVBOs();
+            break;
+        case SDLK_DOWN:
+            rows--;
+            computeAndStoreGrid2D(rows,cols);
+            deleteVBO();
+            buildVBOs();
+            break;
+        case SDLK_LEFT:
+            cols--;
+            computeAndStoreGrid2D(rows,cols);
+            deleteVBO();
+            buildVBOs();
+            break;
+        case SDLK_RIGHT:
+            cols++;
+            computeAndStoreGrid2D(rows,cols);
+            deleteVBO();
+            buildVBOs();
+            break;
+
+
+        case SDLK_l:
+            lightMode = !lightMode;
+            if (lightMode)
+            {
+                glEnable(GL_LIGHTING);
+                glEnable(GL_LIGHT0);
+            }
+            else
+            {
+                glDisable(GL_LIGHTING);
+                glDisable(GL_LIGHT0);
+            }
+            break;
+
         case SDLK_SPACE:
         {
             renMode = (RenderMode)((int)renMode+1 < 5 ? (int)renMode+1 : 0);
@@ -849,7 +914,7 @@ void keyDown(SDL_KeyboardEvent *e) {
             renMode = VERTEX_BUFFER_OBJECT;
             break;
 
-        case SDLK_m:
+        case SDLK_f:
             fillMode = (FillingMode)((int)fillMode+1 < 2 ? (int)fillMode+1 : 0);
             break;
 
@@ -932,7 +997,6 @@ void eventDispatcher() {
                            e.button.button, e.button.x, e.button.y);
                 postRedisplay();
                 break;
-
 
             case SDL_KEYDOWN:
                 keyDown(&e.key);
@@ -1101,7 +1165,7 @@ int main(int argc, char **argv) {
     // OpenGL initialisation, must be done before any OpenGL calls
     init();
     initSharedMem();
-    initGL();
+//    initGL();
     atexit(sys_shutdown);
 
     timer.start();
