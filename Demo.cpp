@@ -51,19 +51,24 @@ int nsw = 2;
 
 enum RenderMode {
     IMMEDIATE_MODE = 0,
-    VERTEX_BUFFER_OBJECT,
+    STORE_ARRAY = 1,
+    STORE_ARRAY_INDICE = 2,
+    VERTEXT_ARRAY = 3,
+    VERTEX_BUFFER_OBJECT
 } renMode = VERTEX_BUFFER_OBJECT;
 
-enum DerefMethods {
-    DRAWARRAYS = 0,
-    MULTIDRAWARRAYS,
-    ARRAYELEMENT,
-    DRAWELEMENTS,
-    DRAWELEMENTSALL,
-    MULTIDRAWELEMENTS,
-    NUMDEREFMETHODS
-} derefMethod = MULTIDRAWELEMENTS;
+enum FillingMode{
+    LINE = 0,
+    FILL = 1
+} fillMode = LINE;
 
+std::string MODE_STRING[] = {
+        "IMMEDIATE_MODE",
+        "STORE_ARRAY",
+        "STORE_ARRAY_INDICE",
+        "VERTEXT_ARRAY",
+        "VERTEX_BUFFER_OBJECT"
+};
 
 enum {
     IM = 0, SA, SAI, VA, VBO, nM
@@ -77,13 +82,6 @@ unsigned n_vertices, n_indices;
 unsigned vbo, ibo;
 unsigned rows = 50, cols = 50;
 
-
-// GLUT CALLBACK functions
-void displayCB();
-
-void reshapeCB(int w, int h);
-
-void timerCB(int millisec);
 
 void idleCB();
 
@@ -119,6 +117,7 @@ void drawString3D(const char *str, float pos[3], float color[4], void *font);
 void showInfo();
 
 void updateVertices(float *vertices, float *srcVertices, float *srcNormals, int count, float time);
+void updateVerticesIM(Vertex *vertices,int count,float time);
 
 void showFPS();
 
@@ -197,7 +196,7 @@ void showInfo() {
     float color[4] = {1, 1, 1, 1};
 
     std::stringstream ss;
-    ss << "VBO: " << (renMode == VERTEX_BUFFER_OBJECT ? "on" : "off") << std::ends;  // add 0(ends) at the end
+    ss << "MODE: " << MODE_STRING[(int)renMode] << std::ends;  // add 0(ends) at the end
     drawString(ss.str().c_str(), 1, screenHeight - TEXT_HEIGHT, color, font);
     ss.str(""); // clear buffer
 
@@ -210,14 +209,7 @@ void showInfo() {
     drawString(ss.str().c_str(), 1, screenHeight - (3 * TEXT_HEIGHT), color, font);
     ss.str("");
 
-    if (renMode == VERTEX_BUFFER_OBJECT)
-    {
-        ss << "Press SPACE key to toggle VBO off." << std::ends;
-    }
-    else
-    {
-        ss << "Press SPACE key to toggle VBO on." << std::ends;
-    }
+    ss << "Press SPACE key to toggle between Mode" << std::ends;
     drawString(ss.str().c_str(), 1, 1, color, font);
 
     // unset floating format
@@ -279,10 +271,12 @@ void showFPS() {
 
 void enableVAs() {
     glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_NORMAL_ARRAY);
 }
 
 void disableVAs() {
     glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_NORMAL_ARRAY);
 }
 
 void bindVBOs() {
@@ -307,12 +301,13 @@ void buildVBOs() {
 
 void enableVBOs() {
     glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_NORMAL_ARRAY);
 
 }
 
 void disableVBOs() {
     glDisableClientState(GL_VERTEX_ARRAY);
-
+    glDisableClientState(GL_NORMAL_ARRAY);
 }
 
 void calcSineWave3D(sinewave wave, float x, float z, double t, float *y, bool der, float *dydx) {
@@ -326,8 +321,11 @@ void calcSineWave3D(sinewave wave, float x, float z, double t, float *y, bool de
 }
 void drawGrid2D(int rows, int cols) {
     glPushAttrib(GL_CURRENT_BIT);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glPolygonMode(GL_FRONT_AND_BACK, fillMode == LINE ? GL_LINE : GL_FILL);
     glColor3f(1.0, 1.0, 1.0);
+
+    float nx,ny,nz;
+    float dydx;
 
     /* Grid */
     float dy = 20.0f / (float) rows;
@@ -338,10 +336,21 @@ void drawGrid2D(int rows, int cols) {
         for (int j = 0; j <= rows; j++) {
             float z = -1.0 + j * dy;
             float y;
-            float dxdy;
-            calcSineWave3D(sws[0], x, z, timer.getElapsedTime(), &y, false, &dxdy);
+
+            calcSineWave3D(sws[0], x, z, timer.getElapsedTime(), &y, true, &dydx);
+            ny = dydx;
+            nx = 1.0;
+            nz = 0;
+
+            glNormal3f(-ny,nx,nz);
             glVertex3f(x, y, z);
-            calcSineWave3D(sws[0], x+dx, z, timer.getElapsedTime(), &y, false, &dxdy);
+
+            calcSineWave3D(sws[0], x+dx, z, timer.getElapsedTime(), &y, true, &dydx);
+            ny = dydx;
+            nx = 1.0;
+            nz = 0;
+
+            glNormal3f(-ny,nx,nz);
             glVertex3f(x + dx, y, z);
         }
         glEnd();
@@ -365,6 +374,9 @@ void computeAndStoreGrid2D(int rows, int cols) {
     indices = (unsigned *) malloc(n_indices * sizeof(unsigned));
 
 
+    float nx,ny,nz;
+    float dydx;
+
     /* Grid */
 
     /* Vertices */
@@ -376,9 +388,14 @@ void computeAndStoreGrid2D(int rows, int cols) {
         for (int j = 0; j <= rows; j++) {
             float z = -1.0 + j * dy;
             float y;
-            float dxdy;
-            calcSineWave3D(sws[0], x, z, timer.getElapsedTime(), &y, false, &dxdy);
+            calcSineWave3D(sws[0], x, z, timer.getElapsedTime(), &y, true, &dydx);
+            ny = dydx;
+            nx = 1.0;
+            nz = 0;
+
             vtx->r = (vec3f) {x, y, z};
+            vtx->n = (vec3f){-ny,nx,nz};
+
             vtx++;
         }
     }
@@ -392,7 +409,6 @@ void computeAndStoreGrid2D(int rows, int cols) {
         }
     }
 
-#define DEBUG_STORE_VERTICES
 #ifdef DEBUG_STORE_VERTICES
     for (int i = 0; i <= cols; i++) {
         for (int j = 0; j <= rows; j++) {
@@ -409,10 +425,9 @@ void computeAndStoreGrid2D(int rows, int cols) {
 
 }
 
-#define DEBUG_DRAW_GRID_ARRAY
 void drawGrid2DStoredVertices(int rows, int cols) {
     glPushAttrib(GL_CURRENT_BIT);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glPolygonMode(GL_FRONT_AND_BACK, fillMode == LINE ? GL_LINE : GL_FILL);
     glColor3f(1.0, 1.0, 1.0);
 
     /* Grid */
@@ -423,11 +438,13 @@ void drawGrid2DStoredVertices(int rows, int cols) {
 #ifdef DEBUG_DRAW_GRID_ARRAY
             printf("%d %d %d %f %f\n", i, j, idx, vertices[idx].r.x, vertices[idx].r.y);
 #endif
+            glNormal3fv(&vertices[idx].n.x);
             glVertex3fv(&vertices[idx].r.x);
             idx += rows + 1;
 #ifdef DEBUG_DRAW_GRID_ARRAY
             printf("%d %d %d %f %f\n", i, j, idx, vertices[idx].r.x, vertices[idx].r.y);
 #endif
+            glNormal3fv(&vertices[idx].n.x);
             glVertex3fv(&vertices[idx].r.x);
         }
         glEnd();
@@ -437,7 +454,7 @@ void drawGrid2DStoredVertices(int rows, int cols) {
 }
 void drawGrid2DStoredVerticesAndIndices(int rows, int cols) {
     glPushAttrib(GL_CURRENT_BIT);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glPolygonMode(GL_FRONT_AND_BACK, fillMode == LINE ? GL_LINE : GL_FILL);
     glColor3f(1.0, 1.0, 1.0);
 
     /* Grid */
@@ -445,14 +462,12 @@ void drawGrid2DStoredVerticesAndIndices(int rows, int cols) {
     for (int i = 0; i < cols; i++) {
         glBegin(GL_TRIANGLE_STRIP);
         for (int j = 0; j <= rows; j++) {
+            glNormal3fv(&vertices[*idx].n.x);
             glVertex3fv(&vertices[*idx].r.x);
-            printf("%d %d %d %f %f\n", i, j, *idx, vertices[*idx].r.x, vertices[*idx].r.y);
-
             idx++;
 
+            glNormal3fv(&vertices[*idx].n.x);
             glVertex3fv(&vertices[*idx].r.x);
-            printf("%d %d %d %f %f\n", i, j, *idx, vertices[*idx].r.x, vertices[*idx].r.y);
-
             idx++;
         }
         glEnd();
@@ -462,12 +477,13 @@ void drawGrid2DStoredVerticesAndIndices(int rows, int cols) {
 }
 void drawGrid2DVAs(int rows, int cols) {
     glPushAttrib(GL_CURRENT_BIT);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glPolygonMode(GL_FRONT_AND_BACK, fillMode == LINE ? GL_LINE : GL_FILL);
     glColor3f(1.0, 1.0, 1.0);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glVertexPointer(3, GL_FLOAT, sizeof(Vertex), &vertices[0].r);
+    glNormalPointer(GL_FLOAT, sizeof(Vertex), &vertices[0].n);
 
     for (int i = 0; i < cols; i++)
         glDrawElements(GL_TRIANGLE_STRIP, (rows + 1) * 2, GL_UNSIGNED_INT, &indices[i * (rows + 1) * 2]);
@@ -476,11 +492,13 @@ void drawGrid2DVAs(int rows, int cols) {
 }
 void drawGrid2DVBOs(int rows, int cols) {
     glPushAttrib(GL_CURRENT_BIT);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glPolygonMode(GL_FRONT_AND_BACK, fillMode == LINE ? GL_LINE : GL_FILL);
     glColor3f(1.0, 1.0, 1.0);
 
     bindVBOs();
     glVertexPointer(3, GL_FLOAT, sizeof(Vertex), BUFFER_OFFSET(0));
+    glNormalPointer(GL_FLOAT, sizeof(Vertex), BUFFER_OFFSET(sizeof(vec3f)));
+
     /* Grid */
     for (int i = 0; i < cols; i++) {
         glDrawElements(GL_TRIANGLE_STRIP, (rows + 1) * 2, GL_UNSIGNED_INT,
@@ -491,11 +509,39 @@ void drawGrid2DVBOs(int rows, int cols) {
 }
 
 
+///////////////////////////////////////////////////////////////////////////////
+// wobble the vertex in and out along normal
+///////////////////////////////////////////////////////////////////////////////
+void updateVerticesIM(Vertex *vertices,unsigned count,float time)
+{
+    if(!vertices)
+        return;
+
+    float x, y, z;
+    float nx,ny,nz;
+    float dydx;
+
+    for(int i=0; i < count; ++i)
+    {
+        x = vertices[i].r.x;
+        y = vertices[i].r.y;
+        z = vertices[i].r.z;
+
+        calcSineWave3D(sws[0],x,z,time,&y,true,&dydx);
+        ny = dydx;
+
+        // update vertex coords
+        vertices[i].r.y = y;
+        vertices[i].n.x = -ny;
+    }
+}
+
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // wobble the vertex in and out along normal
 ///////////////////////////////////////////////////////////////////////////////
-void updateVertices(Vertex* dstVertices, Vertex* srcVertices, float* srcNormals, int count, float time)
+void updateVertices(Vertex* dstVertices, Vertex* srcVertices, int count, float time)
 {
     if(!dstVertices || !srcVertices)
         return;
@@ -509,10 +555,11 @@ void updateVertices(Vertex* dstVertices, Vertex* srcVertices, float* srcNormals,
         z = srcVertices[i].r.z;
 
         float dxdy;
-        calcSineWave3D(sws[0],x,z,time,&y,false,&dxdy);
+        calcSineWave3D(sws[0],x,z,time,&y,true,&dxdy);
 
         // update vertex coords
         dstVertices[i].r.y = y;
+        dstVertices[i].n.x = -dxdy;
     }
 }
 
@@ -554,7 +601,7 @@ void initLights() {
     glLightfv(GL_LIGHT0, GL_SPECULAR, lightKs);
 
     // position the light
-    float lightPos[4] = {0, 0, 20, 1}; // positional light
+    float lightPos[4] = {0, 0, 20, 5}; // positional light
     glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
 
     glEnable(GL_LIGHT0);                        // MUST enable each light source after configuration
@@ -636,6 +683,38 @@ void display(void) {
     if (renMode == IMMEDIATE_MODE)
     {
         drawGrid2D(rows, cols);
+    } else if (renMode == STORE_ARRAY)
+    {
+        // measure the elapsed time of updateVertices()
+        t2.start(); //---------------------------------------------------------
+        updateVerticesIM(vertices,n_vertices,(float)timer.getElapsedTime());
+        t2.stop(); //----------------------------------------------------------
+        updateTime = (float)t2.getElapsedTimeInMilliSec();
+
+        drawGrid2DStoredVertices(rows,cols);
+    }
+    else if (renMode == STORE_ARRAY_INDICE)
+    {
+        // measure the elapsed time of updateVertices()
+        t2.start(); //---------------------------------------------------------
+        updateVerticesIM(vertices,n_vertices,(float)timer.getElapsedTime());
+        t2.stop(); //----------------------------------------------------------
+        updateTime = (float)t2.getElapsedTimeInMilliSec();
+
+        drawGrid2DStoredVerticesAndIndices(rows,cols);
+    }
+    else if (renMode == VERTEXT_ARRAY)
+    {
+        enableVAs();
+
+        // measure the elapsed time of updateVertices()
+        t2.start(); //---------------------------------------------------------
+        updateVerticesIM(vertices,n_vertices,(float)timer.getElapsedTime());
+        t2.stop(); //----------------------------------------------------------
+        updateTime = (float)t2.getElapsedTimeInMilliSec();
+
+        drawGrid2DVAs(rows,cols);
+        disableVAs();
     }
     else if (renMode == VERTEX_BUFFER_OBJECT)
     {
@@ -652,7 +731,7 @@ void display(void) {
         if(ptr)
         {
             // wobble vertex in and out along normal
-            updateVertices(ptr, vertices, nullptr, n_vertices, (float)timer.getElapsedTime());
+            updateVertices(ptr, vertices, n_vertices, (float)timer.getElapsedTime());
             glUnmapBuffer(GL_ARRAY_BUFFER);     // release pointer to mapping buffer
         }
 
@@ -673,7 +752,6 @@ void display(void) {
 
     SDL_GL_SwapWindow(window);
 
-    printf("mode %d\n", renMode);
     // Check for OpenGL errors at least once per frame
     int err;
     while ((err = glGetError()) != GL_NO_ERROR) {
@@ -747,17 +825,32 @@ void keyDown(SDL_KeyboardEvent *e) {
 
         case SDLK_SPACE:
         {
-            if (renMode == VERTEX_BUFFER_OBJECT)
-            {
-                renMode = IMMEDIATE_MODE;
-            }
-            else{
-                renMode = VERTEX_BUFFER_OBJECT;
-            }
+            renMode = (RenderMode)((int)renMode+1 < 5 ? (int)renMode+1 : 0);
             break;
         }
 
+        case SDLK_1:
+            renMode = IMMEDIATE_MODE;
+            break;
+
+        case SDLK_2:
+            renMode = STORE_ARRAY;
+            break;
+
+        case SDLK_3:
+            renMode = STORE_ARRAY_INDICE;
+            break;
+
+        case SDLK_4:
+            renMode = VERTEXT_ARRAY;
+            break;
+
+        case SDLK_5:
+            renMode = VERTEX_BUFFER_OBJECT;
+            break;
+
         case SDLK_m:
+            fillMode = (FillingMode)((int)fillMode+1 < 2 ? (int)fillMode+1 : 0);
             break;
 
         default:
@@ -1008,7 +1101,7 @@ int main(int argc, char **argv) {
     // OpenGL initialisation, must be done before any OpenGL calls
     init();
     initSharedMem();
-//    initGL();
+    initGL();
     atexit(sys_shutdown);
 
     timer.start();

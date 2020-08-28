@@ -21,7 +21,6 @@
 #include <sstream>
 #include <iomanip>
 #include <cstdlib>
-#include "glExtension.h"                        // OpenGL extension helper
 #include "teapot.h"                             // meshes of teapot
 #include "Timer.h"
 #include "WaveFunc.h"

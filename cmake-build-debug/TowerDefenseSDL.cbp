@@ -107,9 +107,6 @@
 		<Unit filename="C:/Users/61416/CLionProjects/TowerDefenseSDL/glxext.h">
 			<Option target="TowerDefenseSDL"/>
 		</Unit>
-		<Unit filename="C:/Users/61416/CLionProjects/TowerDefenseSDL/teapot.h">
-			<Option target="TowerDefenseSDL"/>
-		</Unit>
 		<Unit filename="C:/Users/61416/CLionProjects/TowerDefenseSDL/CMakeLists.txt">
 			<Option virtualFolder="CMake Files\"/>
 		</Unit>
