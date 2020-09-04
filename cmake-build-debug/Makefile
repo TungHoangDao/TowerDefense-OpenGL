@@ -142,60 +142,6 @@ TowerDefenseSDL/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\TowerDefenseSDL.dir\build.make CMakeFiles/TowerDefenseSDL.dir/build
 .PHONY : TowerDefenseSDL/fast
 
-Demo.obj: Demo.cpp.obj
-
-.PHONY : Demo.obj
-
-# target to build an object file
-Demo.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\TowerDefenseSDL.dir\build.make CMakeFiles/TowerDefenseSDL.dir/Demo.cpp.obj
-.PHONY : Demo.cpp.obj
-
-Demo.i: Demo.cpp.i
-
-.PHONY : Demo.i
-
-# target to preprocess a source file
-Demo.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\TowerDefenseSDL.dir\build.make CMakeFiles/TowerDefenseSDL.dir/Demo.cpp.i
-.PHONY : Demo.cpp.i
-
-Demo.s: Demo.cpp.s
-
-.PHONY : Demo.s
-
-# target to generate assembly for a file
-Demo.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\TowerDefenseSDL.dir\build.make CMakeFiles/TowerDefenseSDL.dir/Demo.cpp.s
-.PHONY : Demo.cpp.s
-
-Global.obj: Global.cpp.obj
-
-.PHONY : Global.obj
-
-# target to build an object file
-Global.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\TowerDefenseSDL.dir\build.make CMakeFiles/TowerDefenseSDL.dir/Global.cpp.obj
-.PHONY : Global.cpp.obj
-
-Global.i: Global.cpp.i
-
-.PHONY : Global.i
-
-# target to preprocess a source file
-Global.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\TowerDefenseSDL.dir\build.make CMakeFiles/TowerDefenseSDL.dir/Global.cpp.i
-.PHONY : Global.cpp.i
-
-Global.s: Global.cpp.s
-
-.PHONY : Global.s
-
-# target to generate assembly for a file
-Global.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\TowerDefenseSDL.dir\build.make CMakeFiles/TowerDefenseSDL.dir/Global.cpp.s
-.PHONY : Global.cpp.s
-
 Timer.obj: Timer.cpp.obj
 
 .PHONY : Timer.obj
@@ -223,32 +169,32 @@ Timer.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\TowerDefenseSDL.dir\build.make CMakeFiles/TowerDefenseSDL.dir/Timer.cpp.s
 .PHONY : Timer.cpp.s
 
-WaveFunc.obj: WaveFunc.cpp.obj
+main.obj: main.cpp.obj
 
-.PHONY : WaveFunc.obj
+.PHONY : main.obj
 
 # target to build an object file
-WaveFunc.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\TowerDefenseSDL.dir\build.make CMakeFiles/TowerDefenseSDL.dir/WaveFunc.cpp.obj
-.PHONY : WaveFunc.cpp.obj
+main.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\TowerDefenseSDL.dir\build.make CMakeFiles/TowerDefenseSDL.dir/main.cpp.obj
+.PHONY : main.cpp.obj
 
-WaveFunc.i: WaveFunc.cpp.i
+main.i: main.cpp.i
 
-.PHONY : WaveFunc.i
+.PHONY : main.i
 
 # target to preprocess a source file
-WaveFunc.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\TowerDefenseSDL.dir\build.make CMakeFiles/TowerDefenseSDL.dir/WaveFunc.cpp.i
-.PHONY : WaveFunc.cpp.i
+main.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\TowerDefenseSDL.dir\build.make CMakeFiles/TowerDefenseSDL.dir/main.cpp.i
+.PHONY : main.cpp.i
 
-WaveFunc.s: WaveFunc.cpp.s
+main.s: main.cpp.s
 
-.PHONY : WaveFunc.s
+.PHONY : main.s
 
 # target to generate assembly for a file
-WaveFunc.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\TowerDefenseSDL.dir\build.make CMakeFiles/TowerDefenseSDL.dir/WaveFunc.cpp.s
-.PHONY : WaveFunc.cpp.s
+main.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\TowerDefenseSDL.dir\build.make CMakeFiles/TowerDefenseSDL.dir/main.cpp.s
+.PHONY : main.cpp.s
 
 # Help Target
 help:
@@ -259,18 +205,12 @@ help:
 	@echo ... edit_cache
 	@echo ... rebuild_cache
 	@echo ... TowerDefenseSDL
-	@echo ... Demo.obj
-	@echo ... Demo.i
-	@echo ... Demo.s
-	@echo ... Global.obj
-	@echo ... Global.i
-	@echo ... Global.s
 	@echo ... Timer.obj
 	@echo ... Timer.i
 	@echo ... Timer.s
-	@echo ... WaveFunc.obj
-	@echo ... WaveFunc.i
-	@echo ... WaveFunc.s
+	@echo ... main.obj
+	@echo ... main.i
+	@echo ... main.s
 .PHONY : help
 
 

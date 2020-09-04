@@ -93,12 +93,12 @@ clean: CMakeFiles/TowerDefenseSDL.dir/clean
 CMakeFiles/TowerDefenseSDL.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\TowerDefenseSDL.dir\build.make CMakeFiles/TowerDefenseSDL.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\TowerDefenseSDL.dir\build.make CMakeFiles/TowerDefenseSDL.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=C:\Users\61416\CLionProjects\TowerDefenseSDL\cmake-build-debug\CMakeFiles --progress-num=1,2,3,4,5 "Built target TowerDefenseSDL"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=C:\Users\61416\CLionProjects\TowerDefenseSDL\cmake-build-debug\CMakeFiles --progress-num=1,2,3 "Built target TowerDefenseSDL"
 .PHONY : CMakeFiles/TowerDefenseSDL.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/TowerDefenseSDL.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start C:\Users\61416\CLionProjects\TowerDefenseSDL\cmake-build-debug\CMakeFiles 5
+	$(CMAKE_COMMAND) -E cmake_progress_start C:\Users\61416\CLionProjects\TowerDefenseSDL\cmake-build-debug\CMakeFiles 3
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 CMakeFiles/TowerDefenseSDL.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start C:\Users\61416\CLionProjects\TowerDefenseSDL\cmake-build-debug\CMakeFiles 0
 .PHONY : CMakeFiles/TowerDefenseSDL.dir/rule

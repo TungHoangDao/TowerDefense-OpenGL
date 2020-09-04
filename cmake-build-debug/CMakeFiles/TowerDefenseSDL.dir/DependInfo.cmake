@@ -4,10 +4,8 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "C:/Users/61416/CLionProjects/TowerDefenseSDL/Demo.cpp" "C:/Users/61416/CLionProjects/TowerDefenseSDL/cmake-build-debug/CMakeFiles/TowerDefenseSDL.dir/Demo.cpp.obj"
-  "C:/Users/61416/CLionProjects/TowerDefenseSDL/Global.cpp" "C:/Users/61416/CLionProjects/TowerDefenseSDL/cmake-build-debug/CMakeFiles/TowerDefenseSDL.dir/Global.cpp.obj"
   "C:/Users/61416/CLionProjects/TowerDefenseSDL/Timer.cpp" "C:/Users/61416/CLionProjects/TowerDefenseSDL/cmake-build-debug/CMakeFiles/TowerDefenseSDL.dir/Timer.cpp.obj"
-  "C:/Users/61416/CLionProjects/TowerDefenseSDL/WaveFunc.cpp" "C:/Users/61416/CLionProjects/TowerDefenseSDL/cmake-build-debug/CMakeFiles/TowerDefenseSDL.dir/WaveFunc.cpp.obj"
+  "C:/Users/61416/CLionProjects/TowerDefenseSDL/main.cpp" "C:/Users/61416/CLionProjects/TowerDefenseSDL/cmake-build-debug/CMakeFiles/TowerDefenseSDL.dir/main.cpp.obj"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 

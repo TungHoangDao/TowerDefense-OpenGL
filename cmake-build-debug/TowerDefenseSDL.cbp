@@ -80,31 +80,19 @@
 				</MakeCommands>
 			</Target>
 		</Build>
-		<Unit filename="C:/Users/61416/CLionProjects/TowerDefenseSDL/Demo.cpp">
-			<Option target="TowerDefenseSDL"/>
-		</Unit>
-		<Unit filename="C:/Users/61416/CLionProjects/TowerDefenseSDL/Global.cpp">
-			<Option target="TowerDefenseSDL"/>
-		</Unit>
-		<Unit filename="C:/Users/61416/CLionProjects/TowerDefenseSDL/Global.h">
-			<Option target="TowerDefenseSDL"/>
-		</Unit>
 		<Unit filename="C:/Users/61416/CLionProjects/TowerDefenseSDL/Timer.cpp">
 			<Option target="TowerDefenseSDL"/>
 		</Unit>
 		<Unit filename="C:/Users/61416/CLionProjects/TowerDefenseSDL/Timer.h">
 			<Option target="TowerDefenseSDL"/>
 		</Unit>
-		<Unit filename="C:/Users/61416/CLionProjects/TowerDefenseSDL/WaveFunc.cpp">
-			<Option target="TowerDefenseSDL"/>
-		</Unit>
-		<Unit filename="C:/Users/61416/CLionProjects/TowerDefenseSDL/WaveFunc.h">
-			<Option target="TowerDefenseSDL"/>
-		</Unit>
 		<Unit filename="C:/Users/61416/CLionProjects/TowerDefenseSDL/glext.h">
 			<Option target="TowerDefenseSDL"/>
 		</Unit>
 		<Unit filename="C:/Users/61416/CLionProjects/TowerDefenseSDL/glxext.h">
+			<Option target="TowerDefenseSDL"/>
+		</Unit>
+		<Unit filename="C:/Users/61416/CLionProjects/TowerDefenseSDL/main.cpp">
 			<Option target="TowerDefenseSDL"/>
 		</Unit>
 		<Unit filename="C:/Users/61416/CLionProjects/TowerDefenseSDL/CMakeLists.txt">
