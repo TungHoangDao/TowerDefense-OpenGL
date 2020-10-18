@@ -13,6 +13,10 @@ sys/time.h
 -
 
 C:/Users/61416/CLionProjects/TowerDefenseSDL/main.cpp
+main.h
+C:/Users/61416/CLionProjects/TowerDefenseSDL/main.h
+
+C:/Users/61416/CLionProjects/TowerDefenseSDL/main.h
 GL/glew.h
 -
 GL/gl.h
@@ -41,4 +45,16 @@ cstdlib
 -
 Timer.h
 C:/Users/61416/CLionProjects/TowerDefenseSDL/Timer.h
+shaders.h
+C:/Users/61416/CLionProjects/TowerDefenseSDL/shaders.h
+glm/glm.hpp
+-
+glm/gtc/matrix_transform.hpp
+-
+glm/gtc/type_ptr.hpp
+-
+glm/gtc/constants.hpp
+-
+
+C:/Users/61416/CLionProjects/TowerDefenseSDL/shaders.h
 

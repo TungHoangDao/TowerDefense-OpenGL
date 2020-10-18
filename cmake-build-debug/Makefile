@@ -196,6 +196,33 @@ main.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\TowerDefenseSDL.dir\build.make CMakeFiles/TowerDefenseSDL.dir/main.cpp.s
 .PHONY : main.cpp.s
 
+shaders.obj: shaders.c.obj
+
+.PHONY : shaders.obj
+
+# target to build an object file
+shaders.c.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\TowerDefenseSDL.dir\build.make CMakeFiles/TowerDefenseSDL.dir/shaders.c.obj
+.PHONY : shaders.c.obj
+
+shaders.i: shaders.c.i
+
+.PHONY : shaders.i
+
+# target to preprocess a source file
+shaders.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\TowerDefenseSDL.dir\build.make CMakeFiles/TowerDefenseSDL.dir/shaders.c.i
+.PHONY : shaders.c.i
+
+shaders.s: shaders.c.s
+
+.PHONY : shaders.s
+
+# target to generate assembly for a file
+shaders.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\TowerDefenseSDL.dir\build.make CMakeFiles/TowerDefenseSDL.dir/shaders.c.s
+.PHONY : shaders.c.s
+
 # Help Target
 help:
 	@echo The following are some of the valid targets for this Makefile:
@@ -211,6 +238,9 @@ help:
 	@echo ... main.obj
 	@echo ... main.i
 	@echo ... main.s
+	@echo ... shaders.obj
+	@echo ... shaders.i
+	@echo ... shaders.s
 .PHONY : help
 
 

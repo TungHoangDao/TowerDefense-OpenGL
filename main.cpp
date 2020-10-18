@@ -1,147 +1,4 @@
-#define GLEW_STATIC
-
-#include <GL/glew.h>
-#include <GL/gl.h>
-#include <GL/glu.h>
-#include <GL/glut.h>
-#include <SDL2/SDL.h>
-#include <stdbool.h>
-//#include "glExtension.h"
-#include <stdlib.h>
-#include <math.h>
-#include <cstdio>
-#include <iostream>
-#include <sstream>
-#include <iomanip>
-#include <cstdlib>
-#include "Timer.h"
-
-typedef struct {
-    float x, y;
-} vec2f;
-
-typedef struct {
-    float x, y, z;
-} vec3f;
-
-typedef struct {
-    vec3f r, n;
-} Vertex;
-
-
-// Globals
-bool debug = true;
-SDL_Window *window;
-const float gripper_increment = .2;
-const int milli = 1000;
-
-typedef struct {
-    float A;
-    float k;
-    float w;
-} sinewave;
-
-sinewave sws[] =
-        {
-                {0.25, 2 * M_PI / 1, 0.25 * M_PI},
-                {0.25, 1 * M_PI / 1, 0.5 * M_PI}
-        };
-
-int nsw = 2;
-
-enum RenderMode {
-    IMMEDIATE_MODE = 0,
-    STORE_ARRAY = 1,
-    STORE_ARRAY_INDICE = 2,
-    VERTEXT_ARRAY = 3,
-    VERTEX_BUFFER_OBJECT
-} renMode = VERTEX_BUFFER_OBJECT;
-
-enum FillingMode{
-    LINE = 0,
-    FILL = 1
-} fillMode = LINE;
-
-std::string MODE_STRING[] = {
-        "IMMEDIATE_MODE",
-        "STORE_ARRAY",
-        "STORE_ARRAY_INDICE",
-        "VERTEXT_ARRAY",
-        "VERTEX_BUFFER_OBJECT"
-};
-
-enum {
-    IM = 0, SA, SAI, VA, VBO, nM
-} mode = VBO;
-
-bool PAUSE = false;
-bool STATIC_RENDERING = false;
-
-#define BUFFER_OFFSET(i) ((void*)(i))
-
-Vertex *vertices;
-unsigned *indices;
-unsigned n_vertices, n_indices;
-unsigned vbo, ibo;
-unsigned rows = 50, cols = 50;
-bool lightMode = true;
-
-void idleCB();
-
-void mouseCB(int button, int stat, int x, int y);
-
-void mouseMotionCB(int x, int y);
-
-// CALLBACK function when exit() called ///////////////////////////////////////
-void exitCB();
-void initGL();
-int initGLUT(int argc, char **argv);
-bool initSharedMem();
-void initLights();
-
-void setCamera(float posX, float posY, float posZ, float targetX, float targetY, float targetZ);
-
-GLuint
-createVBO(const void *data, int dataSize, GLenum target = GL_ARRAY_BUFFER_ARB, GLenum usage = GL_STATIC_DRAW_ARB);
-void deleteVBO(const GLuint vboId);
-void drawString(const char *str, int x, int y, float color[4], void *font);
-void drawString3D(const char *str, float pos[3], float color[4], void *font);
-void showInfo();
-void updateVertices(float *vertices, float *srcVertices, float *srcNormals, int count, float time);
-void showFPS();
-void toPerspective();
-
-
-// constants
-const int SCREEN_WIDTH = 800;
-const int SCREEN_HEIGHT = 600;
-const float CAMERA_DISTANCE = 7.0f;
-const int TEXT_WIDTH = 8;
-const int TEXT_HEIGHT = 13;
-
-
-// global variables
-void *font = GLUT_BITMAP_8_BY_13;
-GLuint vboId1 = 0;                  // ID of VBO for vertex arrays (to store vertex coords and normals)
-GLuint vboId2 = 0;                  // ID of VBO for index array
-int screenWidth;
-int screenHeight;
-bool mouseLeftDown;
-bool mouseRightDown;
-float mouseX, mouseY;
-float cameraAngleX;
-float cameraAngleY;
-float cameraDistance;
-bool vboSupported, vboUsed;
-int drawMode = 0;
-Timer timer, t1, t2;
-float drawTime, updateTime;
-float *srcVertices;                 // pointer to copy of vertex array
-int vertexCount;                 // number of vertices
-
-float min = 999;
-float max = -999;
-float average;
+#include "main.h"
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -258,7 +115,7 @@ void showFPS() {
     glMatrixMode(GL_PROJECTION);        // switch to projection matrix
     glPushMatrix();                     // save current projection matrix
     glLoadIdentity();                   // reset projection matrix
-    gluOrtho2D(0, screenWidth, 0, screenHeight); // set to orthogonal projection
+    gluOrtho2D(0, screenWidth/2, 0, screenHeight/2); // set to orthogonal projection
 
     float color[4] = {1, 1, 0, 1};
     int textWidth = (int) fps.size() * TEXT_WIDTH;
@@ -368,9 +225,77 @@ float rand01() {
 
 }
 
+
+/* Perform ADS - ambient, diffuse and specular - lighting calculation
+ * in eye coordinates (EC).
+ */
+glm::vec3 computeLighting(glm::vec3 & rEC, glm::vec3 & nEC)
+{
+
+    // Used to accumulate ambient, diffuse and specular contributions
+    // Note: it is a vec3 being constructed with a single value which
+    // is used for all 3 components
+    glm::vec3 color(0.0);
+
+    // Ambient contribution: A=La×Ma
+    // Default light ambient color and default ambient material color
+    // are both (0.2, 0.2, 0.2)
+    glm::vec3 La(0.2);
+    glm::vec3 Ma(0.2);
+    glm::vec3 ambient(La * Ma);
+    color += ambient;
+
+    // Light direction vector. Default for LIGHT0 is a directional light
+    // along z axis for all vertices, i.e. <0, 0, 1>
+    glm::vec3 lEC( 0.0, 0.0, 1.0 );
+
+    // Test if normal points towards light source, i.e. if polygon
+    // faces toward the light - if not then no diffuse or specular
+    // contribution
+    float dp = glm::dot(nEC, lEC);
+    if (dp > 0.0) {
+        // Calculate diffuse and specular contribution
+
+        // Lambert diffuse: D=Ld×Md×cosθ
+        // Ld: default diffuse light color for GL_LIGHT0 is white (1.0, 1.0, 1.0).
+        // Md: default diffuse material color is grey (0.8, 0.8, 0.8).
+        glm::vec3 Ld(1.0);
+        glm::vec3 Md(0.8);
+        // Need normalized normal to calculate cosθ,
+        // light vector <0, 0, 1> is already normalized
+        nEC = glm::normalize(nEC);
+        float NdotL = glm::dot(nEC, lEC);
+        glm::vec3 diffuse(Ld * Md * NdotL);
+        color += diffuse;
+
+        // Blinn-Phong specular: S=Ls×Ms×cosⁿα
+        // Ls: default specular light color for LIGHT0 is white (1.0, 1.0, 1.0)
+        // Ms: specular material color, also set to white (1.0, 1.0, 1.0),
+        // but default for fixed pipeline is black, which means can't see
+        // specular reflection. Need to set it to same value for fixed
+        // pipeline lighting otherwise will look different.
+        glm::vec3 Ls(1.0);
+        glm::vec3 Ms(1.0);
+        // Default viewer is at infinity along z axis <0, 0, 1> i.e. a
+        // non local viewer (see glLightModel and GL_LIGHT_MODEL_LOCAL_VIEWER)
+        glm::vec3 vEC(0.0, 0.0, 1.0);
+        // Blinn-Phong half vector (using a single capital letter for
+        // variable name!). Need normalized H (and nEC, above) to calculate cosα.
+        glm::vec3 H(lEC + vEC);
+        H = glm::normalize(H);
+        float NdotH = glm::dot(nEC, H);
+        if (NdotH < 0.0)
+            NdotH = 0.0;
+        glm::vec3 specular(Ls * Ms * powf(NdotH, shininess));
+        color += specular;
+    }
+
+    return color;
+}
+
 void computeAndStoreGrid2D(int rows, int cols) {
     n_vertices = (rows + 1) * (cols + 1);
-    n_indices = (rows + 1) * (cols - 1) * 2 + (rows + 1) * 2;
+    n_indices = n_vertices * 2;
     // or more simply: n_indices = n_vertices * 2;
     free(vertices);
     vertices = (Vertex *) malloc(n_vertices * sizeof(Vertex));
@@ -384,8 +309,8 @@ void computeAndStoreGrid2D(int rows, int cols) {
     /* Grid */
 
     /* Vertices */
-    float dy = 20 / (float) rows;
-    float dx = 20 / (float) cols;
+    float dy = 2/ (float) rows;
+    float dx = 2 / (float) cols;
     Vertex *vtx = vertices;
     for (int i = 0; i <= cols; i++) {
         float x = -1.0 + i * dx;
@@ -397,12 +322,19 @@ void computeAndStoreGrid2D(int rows, int cols) {
             nx = 1.0;
             nz = 0;
 
-            vtx->r = (vec3f) {x, y, z};
-            vtx->n = (vec3f){-ny,nx,nz};
+            vtx->r =  {x, y, z};
+            vtx->n = {-ny,nx,nz};
+
+            printf("(%5.2f,%5.2f, %5.2f)", vtx->r.x, vtx->r.y, vtx->r.z);
 
             vtx++;
         }
+        printf("\n");
+
     }
+    printf("\n");
+    printf("\n");
+    printf("\n");
 
     /* Indices */
     unsigned *idx = indices;
@@ -413,7 +345,6 @@ void computeAndStoreGrid2D(int rows, int cols) {
         }
     }
 
-#ifdef DEBUG_STORE_VERTICES
     for (int i = 0; i <= cols; i++) {
         for (int j = 0; j <= rows; j++) {
             int idx = i * (rows + 1) + j;
@@ -425,7 +356,6 @@ void computeAndStoreGrid2D(int rows, int cols) {
         printf("%d ", indices[i]);
     }
     printf("\n");
-#endif
 
 }
 
@@ -461,13 +391,40 @@ void drawGrid2DStoredVerticesAndIndices(int rows, int cols) {
     glPolygonMode(GL_FRONT_AND_BACK, fillMode == LINE ? GL_LINE : GL_FILL);
     glColor3f(1.0, 1.0, 1.0);
 
+    glm::vec3 r, n, rEC, nEC;
+
+    if (true) {
+        glEnable(GL_LIGHTING);
+        glEnable(GL_LIGHT0);
+        glEnable(GL_NORMALIZE);
+        glShadeModel(GL_SMOOTH);
+
+        glMaterialfv(GL_FRONT, GL_SPECULAR, &white[0]);
+        glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+    } else {
+        glDisable(GL_LIGHTING);
+        glColor3fv(&cyan[0]);
+    }
+
+//    if (g.polygonMode == line)
+//        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+//    else
+//        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
     /* Grid */
     unsigned *idx = indices;
     for (int i = 0; i < cols; i++) {
         glBegin(GL_TRIANGLE_STRIP);
         for (int j = 0; j <= rows; j++) {
+//            r = {&vertices[*idx].r.x,&vertices[*idx].r.y,&vertices[*idx].r.z};
+//            rEC = glm::vec3(GL_MODELVIEW_MATRIX * glm::vec4(r, 1.0));
+
+
             glNormal3fv(&vertices[*idx].n.x);
             glVertex3fv(&vertices[*idx].r.x);
+
+
+
             idx++;
 
             glNormal3fv(&vertices[*idx].n.x);
@@ -615,7 +572,7 @@ void initLights() {
     glLightfv(GL_LIGHT0, GL_SPECULAR, lightKs);
 
     // position the light
-    float lightPos[4] = {0, 0, 20, 5}; // positional light
+    float lightPos[4] = {5, 1, 5, 5}; // positional light
     glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
 
     glEnable(GL_LIGHT0);                        // MUST enable each light source after configuration
@@ -796,7 +753,7 @@ void display(void) {
 
         // measure the elapsed time of updateVertices()
         t2.start(); //---------------------------------------------------------
-        if (!STATIC_RENDERING)
+        if (!STATIC_RENDERING && !USE_SHADER)
         {
             // map the buffer object into client's memory
             // Note that glMapBuffer() causes sync issue.
@@ -813,7 +770,6 @@ void display(void) {
 
         t2.stop(); //----------------------------------------------------------
         updateTime = (float)t2.getElapsedTimeInMilliSec();
-
         drawGrid2DVBOs(rows, cols);
         disableVBOs();
     }
@@ -821,15 +777,24 @@ void display(void) {
     glPopMatrix();
 
     t1.stop(); //===============================================================
-    drawTime = (float) t1.getElapsedTimeInMilliSec();
+    drawTime = ((float) t1.getElapsedTimeInMilliSec() - updateTime);
 
     if (drawTime > max)
     {
         max = drawTime;
     }
 
+    if (USE_SHADER)
+    {
+        glUseProgram(0);
+    }
     showFPS();
     showInfo();
+
+    if (USE_SHADER)
+    {
+        glUseProgram(program);
+    }
 
     SDL_GL_SwapWindow(window);
 
@@ -920,6 +885,15 @@ void keyDown(SDL_KeyboardEvent *e) {
             break;
 
         case SDLK_a:
+            USE_SHADER = !USE_SHADER;
+            if (USE_SHADER)
+            {
+                glUseProgram(program);
+            }
+            else
+            {
+                glUseProgram(0);
+            }
             break;
 
         case SDLK_d:
@@ -1114,8 +1088,21 @@ void eventDispatcher() {
     }
 }
 
+GLint getUniLoc(GLuint program, const GLchar *name)
+{
+    GLint loc;
+
+    loc = glGetUniformLocation(program, name);
+
+    if (loc == -1)
+        printf("No such uniform named \"%s\"\n", name);
+
+    return loc;
+}
+
 // Used to update application state e.g. compute physics, game AI
 void update() {
+    glUniform1f(getUniLoc(program, "Time"), timer.getElapsedTime());
 }
 
 [[noreturn]] /*
@@ -1249,6 +1236,12 @@ int main(int argc, char **argv) {
     atexit(sys_shutdown);
 
     timer.start();
+
+
+    // Put a call to getShader and glUseProgram here
+    program = getShader("basicVer.vert","basicFrag.frag");
+
+//    glUseProgram(0);
 
     mainLoop();
 
